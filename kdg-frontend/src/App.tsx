@@ -1,29 +1,33 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
+import React, { useContext } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
-import OwnerLoginPage from "./pages/OwnerLoginPage";
-import CreateRestaurantPage from "./pages/CreateRestaurantPage";
-import CustomerHomePage from "./pages/CustomerHomePage";
+import OwnerDashboard from "./pages/OwnerDashboard";
+import SecurityContextProvider from "./auth/SecurityContextProvider";
+import SecurityContext from "./auth/SecurityContext";
 
-const theme = createTheme({
-    palette: {
-        primary: { main: "#1976d2" },
-        secondary: { main: "#ff9800" },
-    },
-});
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { isAuthenticated } = useContext(SecurityContext);
+    return isAuthenticated() ? <>{children}</> : <Navigate to="/" replace />;
+};
 
-export default function App() {
+const App: React.FC = () => {
     return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Router>
+        <SecurityContextProvider>
+            <BrowserRouter>
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
-                    <Route path="/owner/login" element={<OwnerLoginPage />} />
-                    <Route path="/owner/restaurant" element={<CreateRestaurantPage />} />
-                    <Route path="/customer" element={<CustomerHomePage />} />
+                    <Route
+                        path="/owner"
+                        element={
+                            <ProtectedRoute>
+                                <OwnerDashboard />
+                            </ProtectedRoute>
+                        }
+                    />
                 </Routes>
-            </Router>
-        </ThemeProvider>
+            </BrowserRouter>
+        </SecurityContextProvider>
     );
-}
+};
+
+export default App;

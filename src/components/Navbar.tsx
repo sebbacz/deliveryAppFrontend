@@ -31,6 +31,10 @@ export default function Navbar() {
                     <Button color="inherit" onClick={() => navigate("/")}>
                         Home
                     </Button>
+                    <Button variant="contained" href="/create-restaurant" color="primary">
+                        Manage Restaurant
+                    </Button>
+
                     <Button color="inherit" onClick={() => navigate("/customer")}>
                         Customer
                     </Button>

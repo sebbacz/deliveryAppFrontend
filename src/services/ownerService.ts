@@ -1,4 +1,4 @@
-import api from "./api";
+import {api} from "./api";
 
 export async function getOwnerProfile() {
     const { data } = await api.get("/auth/me");

@@ -1,17 +1,23 @@
-import { createContext } from "react";
+
+import  { createContext } from "react";
 import type { User } from "../model/user";
 
-interface SecurityContextType {
-    isInitialised: boolean;
-    isAuthenticated: () => boolean;
-    loggedInUser?: User;
+export type SecurityContextType = {
+    isInitialised?: boolean;
+    isAuthenticated?: () => boolean;
+    loggedInUser: User | null;
     login: () => void;
-}
+    logout: () => void;
+};
 
-const SecurityContext = createContext<SecurityContextType>({
+const defaultValue: SecurityContextType = {
     isInitialised: false,
     isAuthenticated: () => false,
+    loggedInUser: null,
     login: () => {},
-});
+    logout: () => {},
+};
+
+const SecurityContext = createContext<SecurityContextType>(defaultValue);
 
 export default SecurityContext;

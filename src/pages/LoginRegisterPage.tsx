@@ -1,3 +1,4 @@
+
 import { useContext } from "react";
 import { Box, Button, Typography, Paper } from "@mui/material";
 import SecurityContext from "../auth/SecurityContext";
@@ -10,12 +11,18 @@ export default function LoginRegisterPage() {
     };
 
     const handleRegister = () => {
-
         const kcUrl = import.meta.env.VITE_KC_URL;
         const realm = import.meta.env.VITE_KC_REALM;
         const clientId = import.meta.env.VITE_KC_CLIENT_ID;
-        window.location.href = `${kcUrl}/realms/${realm}/protocol/openid-connect/registrations?client_id=${clientId}&response_type=code`;
+        const redirectUri = window.location.origin;
+
+        window.location.href =
+            `${kcUrl}/realms/${realm}/protocol/openid-connect/registrations?` +
+            `client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}`;
     };
+
+
+    const loggedIn = isAuthenticated?.() ?? false;
 
     return (
         <Box
@@ -34,7 +41,7 @@ export default function LoginRegisterPage() {
                     Please log in or create an account to manage your restaurant.
                 </Typography>
 
-                {!isAuthenticated() ? (
+                {!loggedIn ? (
                     <>
                         <Button
                             variant="contained"
@@ -56,7 +63,7 @@ export default function LoginRegisterPage() {
                     </>
                 ) : (
                     <Typography variant="h6" color="green">
-                         You are already logged in!
+                        You are already logged in!
                     </Typography>
                 )}
             </Paper>

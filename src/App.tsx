@@ -3,6 +3,11 @@ import LandingPage from "./pages/LandingPage";
 import CreateRestaurantPage from "./pages/CreateRestaurantPage";
 import LoginRegisterPage from "./pages/LoginRegisterPage";
 import DishDraftEditorPage from "./pages/DishDraftEditorPage.tsx";
+import OwnerDashboard from "./pages/OwnerDashboard";
+
+
+
+
 
 function App() {
     return (
@@ -12,6 +17,7 @@ function App() {
                 <Route path="/login" element={<LoginRegisterPage />} />
                 <Route path="/create-restaurant" element={<CreateRestaurantPage />} />
                 <Route path="/restaurant/:restaurantId/dishes/new" element={<DishDraftEditorPage />} />
+                <Route path="/owner" element={<OwnerDashboard />}/>
             </Routes>
         </Router>
     );

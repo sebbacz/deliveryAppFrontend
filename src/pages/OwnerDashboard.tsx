@@ -1,52 +1,108 @@
-import React, { useEffect, useState } from "react";
-import { AppBar, Toolbar, Typography, Button, Box, Container } from "@mui/material";
+// src/pages/OwnerDashboard.tsx
+import { useEffect, useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import SecurityContext from "../auth/SecurityContext";
 import { getOwnerProfile } from "../services/ownerService";
+import type { OwnerProfile } from "../services/ownerService";
+import {
+    Box,
+    Typography,
+    Button,
+    Container,
+    Paper,
+    CircularProgress,
+    Stack
+} from "@mui/material";
 
-interface Owner {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-}
+export default function OwnerDashboard() {
 
-const OwnerDashboard: React.FC = () => {
-    const [owner, setOwner] = useState<Owner | null>(null);
+    const { loggedInUser, logout } = useContext(SecurityContext);
+    const [loading, setLoading] = useState(true);
+    const [profile, setProfile] = useState<OwnerProfile | null>(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         getOwnerProfile()
-            .then(setOwner)
-            .catch(console.error);
-    }, []);
+            .then((data) => {
+                setProfile(data);
+                if (!data.hasRestaurant) {
+                    navigate("/create-restaurant");
+                }
+            })
+            .catch(() => {
+                alert("Authorization failed");
+                logout();
+            })
+            .finally(() => setLoading(false));
+    }, [navigate, logout]);
+
+    if (loading) {
+        return (
+            <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                height="100vh"
+            >
+                <CircularProgress />
+            </Box>
+        );
+    }
 
     return (
-        <Box>
-            <AppBar position="static">
-                <Toolbar>
-                    <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                        Restaurant Management
+        <Container maxWidth="md" sx={{ py: 4 }}>
+            <Paper elevation={4} sx={{ p: 4 }}>
+                <Typography variant="h4" gutterBottom>
+                    Restaurant Management 🍽️
+                </Typography>
+
+                {loggedInUser && (
+                    <Typography variant="h6" gutterBottom>
+                        Welcome, {loggedInUser.name}!
                     </Typography>
-                    <Button color="inherit" href="/">
-                        Logout
-                    </Button>
-                </Toolbar>
-            </AppBar>
-
-            <Container sx={{ mt: 4 }}>
-                {owner ? (
-                    <>
-                        <Typography variant="h5">
-                            Welcome, {owner.firstName} {owner.lastName} 👋
-                        </Typography>
-                        <Typography variant="body1" sx={{ mt: 2 }}>
-                            Email: {owner.email}
-                        </Typography>
-                    </>
-                ) : (
-                    <Typography>Loading your profile...</Typography>
                 )}
-            </Container>
-        </Box>
-    );
-};
 
-export default OwnerDashboard;
+                {profile?.hasRestaurant && (
+                    <Stack spacing={2} sx={{ mt: 3 }}>
+                        <Typography variant="body1">
+                            Restaurant ID: {profile.restaurantId}
+                        </Typography>
+
+                        <Button
+                            variant="contained"
+                            onClick={() =>
+                                navigate(`/restaurant/${profile.restaurantId}/dishes`)
+                            }
+                        >
+                            Manage Dishes
+                        </Button>
+
+                        <Button
+                            variant="contained"
+                            color="secondary"
+                            disabled
+                        >
+                            Orders (coming soon)
+                        </Button>
+
+                        <Button
+                            variant="contained"
+                            color="info"
+                            disabled
+                        >
+                            Update Opening Hours (coming soon)
+                        </Button>
+
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={logout}
+                        >
+                            Sign Out
+                        </Button>
+                    </Stack>
+                )}
+            </Paper>
+        </Container>
+    );
+}

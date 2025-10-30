@@ -1,3 +1,4 @@
+
 import { type PropsWithChildren, useEffect, useState } from "react";
 import SecurityContext from "./SecurityContext";
 import keycloak from "./keycloak";
@@ -6,7 +7,7 @@ import type { User } from "../model/user";
 import { setAuthToken } from "../services/api";
 
 export default function SecurityContextProvider({ children }: PropsWithChildren) {
-    const [loggedInUser, setLoggedInUser] = useState<User | undefined>(undefined);
+    const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
     const [isInitialised, setIsInitialised] = useState(false);
 
     useEffect(() => {
@@ -33,7 +34,7 @@ export default function SecurityContextProvider({ children }: PropsWithChildren)
 
     keycloak.onAuthLogout = () => {
         setAuthToken(undefined);
-        setLoggedInUser(undefined);
+        setLoggedInUser(null);
     };
 
     keycloak.onTokenExpired = () => {
@@ -47,6 +48,13 @@ export default function SecurityContextProvider({ children }: PropsWithChildren)
         keycloak.login();
     }
 
+    function logout() {
+        // trigger Keycloak logout and clear local auth state
+        keycloak.logout();
+        setAuthToken(undefined);
+        setLoggedInUser(null);
+    }
+
     function isAuthenticated() {
         return !!keycloak.token && !isExpired(keycloak.token);
     }
@@ -57,7 +65,7 @@ export default function SecurityContextProvider({ children }: PropsWithChildren)
         const name = keycloak.idTokenParsed.given_name || "Unknown";
         const roles = keycloak.tokenParsed.realm_access?.roles ?? [];
 
-        setLoggedInUser({ name, roles });
+        setLoggedInUser({ name, roles } as User);
     }
 
     return (
@@ -67,6 +75,7 @@ export default function SecurityContextProvider({ children }: PropsWithChildren)
                 isAuthenticated,
                 loggedInUser,
                 login,
+                logout,
             }}
         >
             {children}

@@ -1,12 +1,13 @@
-import {api} from "./api";
+import { api } from "./api";
 
-export interface OwnerProfile {
-    ownerId: string;
-    hasRestaurant: boolean;
-    restaurantId?: string;
+export interface Owner {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
 }
 
-export async function getOwnerProfile(): Promise<OwnerProfile> {
-    const { data } = await api.get("/api/owners/me");
+export async function getOwner(): Promise<Owner> {
+    const { data } = await api.get("/api/auth/me");
     return data;
 }

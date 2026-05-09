@@ -1,5 +1,6 @@
 import { useForm, Controller } from "react-hook-form";
 import { TextField, Button, Box, Typography, MenuItem, Paper } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { createRestaurant } from "../services/restaurantService";
 
 type CreateRestaurantForm = {
@@ -17,6 +18,7 @@ type CreateRestaurantForm = {
 };
 
 export default function CreateRestaurantPage() {
+    const navigate = useNavigate();
     const { control, handleSubmit, reset } = useForm<CreateRestaurantForm>({
         defaultValues: {
             name: "",
@@ -36,11 +38,11 @@ export default function CreateRestaurantPage() {
     const onSubmit = async (data: CreateRestaurantForm) => {
         try {
             await createRestaurant(data);
-            alert("✅ Restaurant created successfully!");
             reset();
+            navigate("/owner");
         } catch (error) {
             console.error("Error creating restaurant:", error);
-            alert("❌ Failed to create restaurant");
+            alert("Failed to create restaurant");
         }
     };
 

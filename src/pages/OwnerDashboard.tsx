@@ -1,9 +1,8 @@
-// src/pages/OwnerDashboard.tsx
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import SecurityContext from "../auth/SecurityContext";
-import { getOwnerProfile } from "../services/ownerService";
-import type { OwnerProfile } from "../services/ownerService";
+import { getMyRestaurant } from "../services/restaurantService";
 import {
     Box,
     Typography,
@@ -11,39 +10,36 @@ import {
     Container,
     Paper,
     CircularProgress,
-    Stack
+    Stack,
 } from "@mui/material";
 
 export default function OwnerDashboard() {
-
-    const { loggedInUser, logout } = useContext(SecurityContext);
-    const [loading, setLoading] = useState(true);
-    const [profile, setProfile] = useState<OwnerProfile | null>(null);
+    const { loggedInUser, logout, isAuthenticated } = useContext(SecurityContext);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        getOwnerProfile()
-            .then((data) => {
-                setProfile(data);
-                if (!data.hasRestaurant) {
-                    navigate("/create-restaurant");
-                }
-            })
-            .catch(() => {
-                alert("Authorization failed");
-                logout();
-            })
-            .finally(() => setLoading(false));
-    }, [navigate, logout]);
+    const { data: restaurant, isLoading, isError } = useQuery({
+        queryKey: ["myRestaurant"],
+        queryFn: getMyRestaurant,
+        enabled: isAuthenticated?.() ?? false,
+        retry: false,
+    });
 
-    if (loading) {
+    useEffect(() => {
+        if (!isLoading && restaurant === null) {
+            navigate("/create-restaurant");
+        }
+    }, [restaurant, isLoading, navigate]);
+
+    useEffect(() => {
+        if (isError) {
+            alert("Authorization failed");
+            logout();
+        }
+    }, [isError, logout]);
+
+    if (isLoading || restaurant === undefined) {
         return (
-            <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                height="100vh"
-            >
+            <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
                 <CircularProgress />
             </Box>
         );
@@ -53,7 +49,7 @@ export default function OwnerDashboard() {
         <Container maxWidth="md" sx={{ py: 4 }}>
             <Paper elevation={4} sx={{ p: 4 }}>
                 <Typography variant="h4" gutterBottom>
-                    Restaurant Management 🍽️
+                    Restaurant Management
                 </Typography>
 
                 {loggedInUser && (
@@ -62,42 +58,31 @@ export default function OwnerDashboard() {
                     </Typography>
                 )}
 
-                {profile?.hasRestaurant && (
+                {restaurant && (
                     <Stack spacing={2} sx={{ mt: 3 }}>
                         <Typography variant="body1">
-                            Restaurant ID: {profile.restaurantId}
+                            <strong>{restaurant.name}</strong> &mdash; {restaurant.typeOfCuisine}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {restaurant.street} {restaurant.number}, {restaurant.postalCode} {restaurant.city}, {restaurant.country}
                         </Typography>
 
                         <Button
                             variant="contained"
-                            onClick={() =>
-                                navigate(`/restaurant/${profile.restaurantId}/dishes`)
-                            }
+                            onClick={() => navigate(`/restaurant/${restaurant.id}/dishes`)}
                         >
                             Manage Dishes
                         </Button>
 
-                        <Button
-                            variant="contained"
-                            color="secondary"
-                            disabled
-                        >
+                        <Button variant="contained" color="secondary" disabled>
                             Orders (coming soon)
                         </Button>
 
-                        <Button
-                            variant="contained"
-                            color="info"
-                            disabled
-                        >
-                            Update Opening Hours (coming soon)
+                        <Button variant="contained" color="info" disabled>
+                            Opening Hours (coming soon)
                         </Button>
 
-                        <Button
-                            variant="outlined"
-                            color="error"
-                            onClick={logout}
-                        >
+                        <Button variant="outlined" color="error" onClick={logout}>
                             Sign Out
                         </Button>
                     </Stack>

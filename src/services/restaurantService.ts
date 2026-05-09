@@ -1,6 +1,19 @@
-import axios from "axios";
+import { api } from "./api";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+export type RestaurantResponse = {
+    id: string;
+    name: string;
+    street: string;
+    number: string;
+    postalCode: string;
+    city: string;
+    country: string;
+    contactEmail: string;
+    pictureUrl: string;
+    defaultPreparationTime: number;
+    typeOfCuisine: string;
+    openingHours: string;
+};
 
 export type CreateRestaurantRequest = {
     name: string;
@@ -16,7 +29,17 @@ export type CreateRestaurantRequest = {
     openingHours: string;
 };
 
-export async function createRestaurant(data: CreateRestaurantRequest) {
-    const response = await axios.post(`${BACKEND_URL}/api/restaurants`, data);
-    return response.data;
+export async function createRestaurant(data: CreateRestaurantRequest): Promise<RestaurantResponse> {
+    const { data: response } = await api.post("/api/restaurants", data);
+    return response;
+}
+
+export async function getMyRestaurant(): Promise<RestaurantResponse | null> {
+    try {
+        const { data } = await api.get("/api/restaurants/my");
+        return data;
+    } catch (error: any) {
+        if (error.response?.status === 404) return null;
+        throw error;
+    }
 }

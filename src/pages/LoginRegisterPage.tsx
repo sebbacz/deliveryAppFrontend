@@ -1,10 +1,16 @@
 
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Box, Button, Typography, Paper } from "@mui/material";
 import SecurityContext from "../auth/SecurityContext";
 
 export default function LoginRegisterPage() {
     const { isAuthenticated, login } = useContext(SecurityContext);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (isAuthenticated?.()) navigate("/owner");
+    }, [isAuthenticated, navigate]);
 
     const handleLogin = () => {
         login();

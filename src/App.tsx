@@ -5,6 +5,7 @@ import LoginRegisterPage from "./pages/LoginRegisterPage";
 import DishDraftEditorPage from "./pages/DishDraftEditorPage";
 import DishManagePage from "./pages/DishManagePage";
 import OwnerDashboard from "./pages/OwnerDashboard";
+import OrdersPage from "./pages/OrdersPage";
 
 function App() {
     return (
@@ -16,6 +17,7 @@ function App() {
                 <Route path="/owner" element={<OwnerDashboard />} />
                 <Route path="/restaurant/:restaurantId/dishes" element={<DishManagePage />} />
                 <Route path="/restaurant/:restaurantId/dishes/new" element={<DishDraftEditorPage />} />
+                <Route path="/restaurant/:restaurantId/orders" element={<OrdersPage />} />
             </Routes>
         </Router>
     );

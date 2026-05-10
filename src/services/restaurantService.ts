@@ -13,6 +13,7 @@ export type RestaurantResponse = {
     defaultPreparationTime: number;
     typeOfCuisine: string;
     openingHours: string;
+    isOpen: boolean;
 };
 
 export type CreateRestaurantRequest = {
@@ -42,4 +43,12 @@ export async function getMyRestaurant(): Promise<RestaurantResponse | null> {
         if (error.response?.status === 404) return null;
         throw error;
     }
+}
+
+export async function openRestaurant(): Promise<void> {
+    await api.put("/api/restaurants/my/open");
+}
+
+export async function closeRestaurant(): Promise<void> {
+    await api.put("/api/restaurants/my/close");
 }

@@ -5,12 +5,14 @@ import { Box, Button, Typography, Paper } from "@mui/material";
 import SecurityContext from "../auth/SecurityContext";
 
 export default function LoginRegisterPage() {
-    const { isAuthenticated, login } = useContext(SecurityContext);
+    const { isInitialised, loggedInUser, login } = useContext(SecurityContext);
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (isAuthenticated?.()) navigate("/owner");
-    }, [isAuthenticated, navigate]);
+        if (isInitialised && loggedInUser) {
+            navigate("/owner");
+        }
+    }, [isInitialised, loggedInUser, navigate]);
 
     const handleLogin = () => {
         login();
@@ -27,8 +29,7 @@ export default function LoginRegisterPage() {
             `client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}`;
     };
 
-
-    const loggedIn = isAuthenticated?.() ?? false;
+    const loggedIn = !!loggedInUser;
 
     return (
         <Box

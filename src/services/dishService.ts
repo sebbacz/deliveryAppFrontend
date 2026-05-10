@@ -48,3 +48,7 @@ export async function markDishBackInStock(id: string): Promise<void> {
 export async function applyPendingDishChanges(restaurantId: string): Promise<void> {
     await api.post(`/api/dishes/apply-changes/${restaurantId}`);
 }
+
+export async function scheduleDishChanges(restaurantId: string, scheduledAt: string): Promise<void> {
+    await api.post("/api/dishes/schedule", { restaurantId, scheduledAt });
+}

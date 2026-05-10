@@ -5,9 +5,14 @@ import {
     Button,
     Chip,
     Container,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     Divider,
     Paper,
     Stack,
+    TextField,
     Typography,
 } from "@mui/material";
 import {
@@ -15,6 +20,7 @@ import {
     markDishBackInStock,
     markDishOutOfStock,
     publishDish,
+    scheduleDishChanges,
     unpublishDish,
     type DishResponse,
 } from "../services/dishService";
@@ -26,6 +32,8 @@ export default function DishManagePage() {
     const [dishes, setDishes] = useState<DishResponse[]>(() =>
         restaurantId ? getDishes(restaurantId) : []
     );
+    const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+    const [scheduledAt, setScheduledAt] = useState("");
 
     function reload() {
         if (restaurantId) setDishes(getDishes(restaurantId));
@@ -63,6 +71,14 @@ export default function DishManagePage() {
         alert("All pending changes applied.");
     }
 
+    async function handleScheduleConfirm() {
+        if (!restaurantId || !scheduledAt) return;
+        await scheduleDishChanges(restaurantId, scheduledAt);
+        setScheduleDialogOpen(false);
+        setScheduledAt("");
+        alert("Changes scheduled successfully.");
+    }
+
     const pendingCount = dishes.filter((d) => d.state === "DRAFT").length;
 
     return (
@@ -71,9 +87,14 @@ export default function DishManagePage() {
                 <Typography variant="h5">Dish Management</Typography>
                 <Stack direction="row" spacing={1}>
                     {pendingCount > 0 && (
-                        <Button variant="outlined" color="warning" onClick={handleApplyChanges}>
-                            Apply Changes ({pendingCount} pending)
-                        </Button>
+                        <>
+                            <Button variant="outlined" color="warning" onClick={handleApplyChanges}>
+                                Apply Changes ({pendingCount} pending)
+                            </Button>
+                            <Button variant="outlined" color="info" onClick={() => setScheduleDialogOpen(true)}>
+                                Schedule Changes
+                            </Button>
+                        </>
                     )}
                     <Button
                         variant="contained"
@@ -106,6 +127,31 @@ export default function DishManagePage() {
                     ))}
                 </Stack>
             )}
+
+            {/* US7: Schedule changes dialog */}
+            <Dialog open={scheduleDialogOpen} onClose={() => setScheduleDialogOpen(false)}>
+                <DialogTitle>Schedule Pending Changes</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        All {pendingCount} pending draft(s) will go live at the chosen time.
+                    </Typography>
+                    <TextField
+                        label="Go live at"
+                        type="datetime-local"
+                        fullWidth
+                        value={scheduledAt}
+                        onChange={(e) => setScheduledAt(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                        inputProps={{ min: new Date().toISOString().slice(0, 16) }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setScheduleDialogOpen(false)}>Cancel</Button>
+                    <Button variant="contained" onClick={handleScheduleConfirm} disabled={!scheduledAt}>
+                        Schedule
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 }

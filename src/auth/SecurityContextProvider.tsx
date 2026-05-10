@@ -1,5 +1,5 @@
 
-import { type PropsWithChildren, useEffect, useState } from "react";
+import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 import SecurityContext from "./SecurityContext";
 import keycloak from "./keycloak";
 import { isExpired } from "react-jwt";
@@ -9,22 +9,25 @@ import { setAuthToken } from "../services/api";
 export default function SecurityContextProvider({ children }: PropsWithChildren) {
     const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
     const [isInitialised, setIsInitialised] = useState(false);
+    const initCalled = useRef(false);
 
     useEffect(() => {
-        if (!keycloak.authenticated) {
-            keycloak.init({
-                onLoad: "check-sso",
-                checkLoginIframe: false,
+        if (initCalled.current) return;
+        initCalled.current = true;
+
+        keycloak.init({
+            onLoad: "check-sso",
+            checkLoginIframe: false,
+            silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
+        })
+            .then(() => {
+                setIsInitialised(true);
+                if (keycloak.authenticated) {
+                    setAuthToken(keycloak.token);
+                    updateUserFromToken();
+                }
             })
-                .then(() => {
-                    setIsInitialised(true);
-                    if (keycloak.authenticated) {
-                        setAuthToken(keycloak.token);
-                        updateUserFromToken();
-                    }
-                })
-                .catch(console.error);
-        }
+            .catch(console.error);
     }, []);
 
     keycloak.onAuthSuccess = () => {

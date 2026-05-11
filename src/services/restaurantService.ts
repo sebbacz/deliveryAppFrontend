@@ -52,3 +52,13 @@ export async function openRestaurant(): Promise<void> {
 export async function closeRestaurant(): Promise<void> {
     await api.put("/api/restaurants/my/close");
 }
+
+export async function getAllRestaurants(): Promise<RestaurantResponse[]> {
+    const { data } = await api.get("/unsecured/restaurants");
+    return data;
+}
+
+export async function getRestaurantById(id: string): Promise<RestaurantResponse> {
+    const { data } = await api.get(`/unsecured/restaurants/${id}`);
+    return data;
+}

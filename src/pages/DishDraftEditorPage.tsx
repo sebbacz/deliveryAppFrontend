@@ -9,11 +9,15 @@ import {
     Stack,
     TextField,
     Typography,
+    CircularProgress,
+    Grid,
+    Divider,
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { saveDishDraft } from "../services/dishService";
 import { upsertDish } from "../services/dishStore";
+import PageLayout from "../components/PageLayout";
 
 const DISH_TYPES = ["STARTER", "MAIN", "DESSERT"] as const;
 const FOOD_TAG_OPTIONS = ["lactose", "gluten", "vegan", "vegetarian", "nuts", "shellfish"];
@@ -31,25 +35,27 @@ export default function DishDraftEditorPage() {
     const navigate = useNavigate();
     const [foodTags, setFoodTags] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const { control, handleSubmit, reset } = useForm<FormData>({
         defaultValues: { name: "", type: "MAIN", description: "", price: 0, pictureUrl: "" },
     });
 
-    function addTag(tag: string) {
-        const trimmed = tag.trim().toLowerCase();
-        if (trimmed && !foodTags.includes(trimmed)) {
-            setFoodTags((prev) => [...prev, trimmed]);
-        }
-        setTagInput("");
+    function toggleTag(tag: string) {
+        setFoodTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
     }
 
-    function removeTag(tag: string) {
-        setFoodTags((prev) => prev.filter((t) => t !== tag));
+    function addCustomTag() {
+        const trimmed = tagInput.trim().toLowerCase();
+        if (trimmed && !foodTags.includes(trimmed)) setFoodTags((prev) => [...prev, trimmed]);
+        setTagInput("");
     }
 
     const onSubmit = async (data: FormData) => {
         if (!restaurantId) return;
+        setSubmitting(true);
+        setError(null);
         try {
             const created = await saveDishDraft({
                 restaurantId,
@@ -65,124 +71,127 @@ export default function DishDraftEditorPage() {
             setFoodTags([]);
             navigate(`/restaurant/${restaurantId}/dishes`);
         } catch {
-            alert("Error saving dish draft");
+            setError("Failed to save dish draft. Please try again.");
+        } finally {
+            setSubmitting(false);
         }
     };
 
     return (
-        <Container maxWidth="sm" sx={{ py: 4 }}>
-            <Paper elevation={3} sx={{ p: 4 }}>
-                <Typography variant="h5" mb={3}>
-                    New Dish Draft
-                </Typography>
+        <PageLayout>
+            <Container maxWidth="sm">
+                <Box sx={{ mb: 4 }}>
+                    <Button variant="text" onClick={() => navigate(`/restaurant/${restaurantId}/dishes`)} sx={{ mb: 1, pl: 0 }}>
+                        ← Back to dishes
+                    </Button>
+                    <Typography variant="h5">New dish draft</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Drafts are invisible to customers until published.
+                    </Typography>
+                </Box>
 
-                <form onSubmit={handleSubmit(onSubmit)}>
-                    <Controller
-                        name="name"
-                        control={control}
-                        rules={{ required: true }}
-                        render={({ field }) => (
-                            <TextField {...field} label="Dish Name" fullWidth required margin="normal" />
-                        )}
-                    />
+                <Paper elevation={0} sx={{ p: { xs: 3, sm: 4 }, border: "1.5px solid", borderColor: "divider" }}>
+                    <form onSubmit={handleSubmit(onSubmit)}>
+                        <Typography variant="subtitle1" sx={{ mb: 1 }}>Dish details</Typography>
 
-                    <Controller
-                        name="type"
-                        control={control}
-                        rules={{ required: true }}
-                        render={({ field }) => (
-                            <TextField {...field} select label="Type" fullWidth required margin="normal">
-                                {DISH_TYPES.map((t) => (
-                                    <MenuItem key={t} value={t}>
-                                        {t.charAt(0) + t.slice(1).toLowerCase()}
-                                    </MenuItem>
-                                ))}
-                            </TextField>
-                        )}
-                    />
+                        <Controller name="name" control={control} rules={{ required: true }}
+                            render={({ field, fieldState }) => (
+                                <TextField {...field} label="Dish name" fullWidth required margin="normal"
+                                    error={!!fieldState.error} helperText={fieldState.error ? "Required" : ""} />
+                            )}
+                        />
 
-                    <Controller
-                        name="description"
-                        control={control}
-                        rules={{ required: true }}
-                        render={({ field }) => (
-                            <TextField {...field} label="Description" fullWidth required margin="normal" multiline rows={2} />
-                        )}
-                    />
+                        <Grid container spacing={2} sx={{ mt: 0 }}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Controller name="type" control={control} rules={{ required: true }}
+                                    render={({ field }) => (
+                                        <TextField {...field} select label="Type" fullWidth required margin="normal">
+                                            {DISH_TYPES.map((t) => (
+                                                <MenuItem key={t} value={t}>
+                                                    {t.charAt(0) + t.slice(1).toLowerCase()}
+                                                </MenuItem>
+                                            ))}
+                                        </TextField>
+                                    )}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Controller name="price" control={control} rules={{ required: true, min: 0 }}
+                                    render={({ field, fieldState }) => (
+                                        <TextField {...field} label="Price (€)" type="number" fullWidth required margin="normal"
+                                            inputProps={{ step: "0.01", min: "0" }}
+                                            error={!!fieldState.error} />
+                                    )}
+                                />
+                            </Grid>
+                        </Grid>
 
-                    <Controller
-                        name="price"
-                        control={control}
-                        rules={{ required: true, min: 0 }}
-                        render={({ field }) => (
-                            <TextField {...field} label="Price (€)" type="number" fullWidth required margin="normal"
-                                inputProps={{ step: "0.01", min: "0" }} />
-                        )}
-                    />
+                        <Controller name="description" control={control} rules={{ required: true }}
+                            render={({ field }) => (
+                                <TextField {...field} label="Description" fullWidth required margin="normal" multiline rows={3} />
+                            )}
+                        />
 
-                    <Controller
-                        name="pictureUrl"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} label="Picture URL" fullWidth margin="normal" />
-                        )}
-                    />
+                        <Controller name="pictureUrl" control={control}
+                            render={({ field }) => (
+                                <TextField {...field} label="Picture URL" fullWidth margin="normal" placeholder="https://..." />
+                            )}
+                        />
 
-                    <Box sx={{ mt: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                            Food Tags
-                        </Typography>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1 }}>
+                        <Divider sx={{ my: 3 }} />
+
+                        {/* Food tags */}
+                        <Typography variant="subtitle1" sx={{ mb: 1.5 }}>Food tags</Typography>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
                             {FOOD_TAG_OPTIONS.map((tag) => (
                                 <Chip
                                     key={tag}
                                     label={tag}
                                     size="small"
-                                    onClick={() => addTag(tag)}
+                                    onClick={() => toggleTag(tag)}
                                     color={foodTags.includes(tag) ? "primary" : "default"}
                                     variant={foodTags.includes(tag) ? "filled" : "outlined"}
-                                    sx={{ mb: 1 }}
+                                    sx={{ mb: 1, cursor: "pointer" }}
                                 />
                             ))}
                         </Stack>
-                        <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+
+                        <Stack direction="row" spacing={1}>
                             <TextField
                                 size="small"
                                 label="Custom tag"
                                 value={tagInput}
                                 onChange={(e) => setTagInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        addTag(tagInput);
-                                    }
-                                }}
+                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
+                                sx={{ flex: 1 }}
                             />
-                            <Button variant="outlined" size="small" onClick={() => addTag(tagInput)}>
-                                Add
+                            <Button variant="outlined" onClick={addCustomTag}>Add</Button>
+                        </Stack>
+
+                        {foodTags.filter((t) => !FOOD_TAG_OPTIONS.includes(t)).length > 0 && (
+                            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1.5 }}>
+                                {foodTags.filter((t) => !FOOD_TAG_OPTIONS.includes(t)).map((tag) => (
+                                    <Chip key={tag} label={tag} onDelete={() => setFoodTags((p) => p.filter((x) => x !== tag))} size="small" />
+                                ))}
+                            </Stack>
+                        )}
+
+                        {error && (
+                            <Typography color="error" variant="body2" sx={{ mt: 2 }}>{error}</Typography>
+                        )}
+
+                        <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
+                            <Button type="submit" variant="contained" size="large" fullWidth disabled={submitting}>
+                                {submitting ? <CircularProgress size={22} color="inherit" /> : "Save draft"}
+                            </Button>
+                            <Button variant="outlined" size="large" fullWidth
+                                onClick={() => navigate(`/restaurant/${restaurantId}/dishes`)}>
+                                Cancel
                             </Button>
                         </Stack>
-                        <Stack direction="row" spacing={1} flexWrap="wrap">
-                            {foodTags.map((tag) => (
-                                <Chip key={tag} label={tag} onDelete={() => removeTag(tag)} size="small" sx={{ mb: 0.5 }} />
-                            ))}
-                        </Stack>
-                    </Box>
-
-                    <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
-                        <Button type="submit" variant="contained" fullWidth>
-                            Save Draft
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            fullWidth
-                            onClick={() => navigate(`/restaurant/${restaurantId}/dishes`)}
-                        >
-                            Cancel
-                        </Button>
-                    </Stack>
-                </form>
-            </Paper>
-        </Container>
+                    </form>
+                </Paper>
+            </Container>
+        </PageLayout>
     );
 }

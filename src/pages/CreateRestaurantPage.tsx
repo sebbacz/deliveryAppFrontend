@@ -1,7 +1,20 @@
 import { useForm, Controller } from "react-hook-form";
-import { TextField, Button, Box, Typography, MenuItem, Paper } from "@mui/material";
+import {
+    TextField,
+    Button,
+    Box,
+    Typography,
+    MenuItem,
+    Paper,
+    Container,
+    Grid,
+    Divider,
+    CircularProgress,
+} from "@mui/material";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createRestaurant } from "../services/restaurantService";
+import PageLayout from "../components/PageLayout";
 
 type CreateRestaurantForm = {
     name: string;
@@ -17,16 +30,21 @@ type CreateRestaurantForm = {
     openingHours: string;
 };
 
+const CUISINE_OPTIONS = ["Belgian", "French", "Italian", "Japanese", "Mexican", "Indian", "Greek", "American", "Thai", "Other"];
+
 export default function CreateRestaurantPage() {
     const navigate = useNavigate();
-    const { control, handleSubmit, reset } = useForm<CreateRestaurantForm>({
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const { control, handleSubmit } = useForm<CreateRestaurantForm>({
         defaultValues: {
             name: "",
             street: "",
             number: "",
             postalCode: "",
             city: "",
-            country: "",
+            country: "Belgium",
             contactEmail: "",
             pictureUrl: "",
             defaultPreparationTime: 15,
@@ -36,136 +54,134 @@ export default function CreateRestaurantPage() {
     });
 
     const onSubmit = async (data: CreateRestaurantForm) => {
+        setSubmitting(true);
+        setError(null);
         try {
             await createRestaurant(data);
-            reset();
             navigate("/owner");
-        } catch (error) {
-            console.error("Error creating restaurant:", error);
-            alert("Failed to create restaurant");
+        } catch {
+            setError("Could not create restaurant. Please check your connection and try again.");
+        } finally {
+            setSubmitting(false);
         }
     };
 
     return (
-        <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            minHeight="100vh"
-            sx={{ backgroundColor: "#f7f7f7" }}
-        >
-            <Paper elevation={3} sx={{ p: 4, width: "600px" }}>
-                <Typography variant="h5" mb={2}>
-                    Create Restaurant
-                </Typography>
-                <form onSubmit={handleSubmit(onSubmit)}>
-                    <Controller
-                        name="name"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} label="Restaurant Name" fullWidth margin="normal" required />
-                        )}
-                    />
-
-                    <Typography variant="h6" mt={2}>
-                        Address
+        <PageLayout>
+            <Container maxWidth="sm">
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h5" gutterBottom>Set up your restaurant</Typography>
+                    <Typography color="text.secondary" variant="body2">
+                        Fill in your restaurant details. You can manage everything else from the dashboard after creation.
                     </Typography>
-                    <Controller
-                        name="street"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} label="Street" fullWidth margin="normal" required />
-                        )}
-                    />
-                    <Controller
-                        name="number"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} label="Number" fullWidth margin="normal" required />
-                        )}
-                    />
-                    <Controller
-                        name="postalCode"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} label="Postal Code" fullWidth margin="normal" required />
-                        )}
-                    />
-                    <Controller
-                        name="city"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} label="City" fullWidth margin="normal" required />
-                        )}
-                    />
-                    <Controller
-                        name="country"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} label="Country" fullWidth margin="normal" required />
-                        )}
-                    />
+                </Box>
 
-                    <Controller
-                        name="contactEmail"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} label="Contact Email" type="email" fullWidth margin="normal" required />
-                        )}
-                    />
+                <Paper elevation={0} sx={{ p: { xs: 3, sm: 4 }, border: "1.5px solid", borderColor: "divider" }}>
+                    <form onSubmit={handleSubmit(onSubmit)}>
 
-                    <Controller
-                        name="pictureUrl"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} label="Picture URL" fullWidth margin="normal" required />
-                        )}
-                    />
+                        {/* Basic info */}
+                        <Typography variant="subtitle1" sx={{ mb: 2 }}>Basic info</Typography>
+                        <Controller name="name" control={control} rules={{ required: true }}
+                            render={({ field, fieldState }) => (
+                                <TextField {...field} label="Restaurant name" fullWidth required margin="normal"
+                                    error={!!fieldState.error} helperText={fieldState.error ? "Required" : ""} />
+                            )}
+                        />
+                        <Grid container spacing={2} sx={{ mt: 0 }}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Controller name="typeOfCuisine" control={control} rules={{ required: true }}
+                                    render={({ field, fieldState }) => (
+                                        <TextField {...field} select label="Cuisine type" fullWidth required margin="normal"
+                                            error={!!fieldState.error}>
+                                            {CUISINE_OPTIONS.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                                        </TextField>
+                                    )}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <Controller name="defaultPreparationTime" control={control} rules={{ required: true, min: 1 }}
+                                    render={({ field }) => (
+                                        <TextField {...field} label="Prep time (min)" type="number" fullWidth required margin="normal"
+                                            inputProps={{ min: 1 }} />
+                                    )}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Controller name="contactEmail" control={control} rules={{ required: true }}
+                            render={({ field }) => (
+                                <TextField {...field} label="Contact email" type="email" fullWidth required margin="normal" />
+                            )}
+                        />
+                        <Controller name="pictureUrl" control={control}
+                            render={({ field }) => (
+                                <TextField {...field} label="Picture URL" fullWidth margin="normal" placeholder="https://..." />
+                            )}
+                        />
+                        <Controller name="openingHours" control={control}
+                            render={({ field }) => (
+                                <TextField {...field} label="Opening hours" fullWidth margin="normal" placeholder="Mon–Fri 11:00–22:00" />
+                            )}
+                        />
 
-                    <Controller
-                        name="defaultPreparationTime"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField
-                                {...field}
-                                label="Default Preparation Time (minutes)"
-                                type="number"
-                                fullWidth
-                                margin="normal"
-                                required
-                            />
-                        )}
-                    />
+                        <Divider sx={{ my: 3 }} />
 
-                    <Controller
-                        name="typeOfCuisine"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} select label="Type of Cuisine" fullWidth margin="normal" required>
-                                <MenuItem value="Italian">Italian</MenuItem>
-                                <MenuItem value="French">French</MenuItem>
-                                <MenuItem value="Japanese">Japanese</MenuItem>
-                                <MenuItem value="Mexican">Mexican</MenuItem>
-                                <MenuItem value="Other">Other</MenuItem>
-                            </TextField>
-                        )}
-                    />
+                        {/* Address */}
+                        <Typography variant="subtitle1" sx={{ mb: 2 }}>Address</Typography>
+                        <Grid container spacing={2}>
+                            <Grid size={{ xs: 9 }}>
+                                <Controller name="street" control={control} rules={{ required: true }}
+                                    render={({ field }) => (
+                                        <TextField {...field} label="Street" fullWidth required />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 3 }}>
+                                <Controller name="number" control={control} rules={{ required: true }}
+                                    render={({ field }) => (
+                                        <TextField {...field} label="No." fullWidth required />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 4 }}>
+                                <Controller name="postalCode" control={control} rules={{ required: true }}
+                                    render={({ field }) => (
+                                        <TextField {...field} label="Postal code" fullWidth required />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 8 }}>
+                                <Controller name="city" control={control} rules={{ required: true }}
+                                    render={({ field }) => (
+                                        <TextField {...field} label="City" fullWidth required />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12 }}>
+                                <Controller name="country" control={control} rules={{ required: true }}
+                                    render={({ field }) => (
+                                        <TextField {...field} label="Country" fullWidth required />
+                                    )}
+                                />
+                            </Grid>
+                        </Grid>
 
-                    <Controller
-                        name="openingHours"
-                        control={control}
-                        render={({ field }) => (
-                            <TextField {...field} label="Opening Hours (e.g. Mon-Fri 9:00–21:00)" fullWidth margin="normal" />
+                        {error && (
+                            <Typography color="error" variant="body2" sx={{ mt: 2 }}>{error}</Typography>
                         )}
-                    />
 
-                    <Box mt={3}>
-                        <Button type="submit" variant="contained" color="primary" fullWidth>
-                            Create Restaurant
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            size="large"
+                            fullWidth
+                            disabled={submitting}
+                            sx={{ mt: 4 }}
+                        >
+                            {submitting ? <CircularProgress size={22} color="inherit" /> : "Create restaurant"}
                         </Button>
-                    </Box>
-                </form>
-            </Paper>
-        </Box>
+                    </form>
+                </Paper>
+            </Container>
+        </PageLayout>
     );
 }

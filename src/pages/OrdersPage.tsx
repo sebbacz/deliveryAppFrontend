@@ -20,6 +20,7 @@ import {
 import {
     acceptOrder,
     getOrdersForRestaurant,
+    markOrderReady,
     rejectOrder,
     type OrderResponse,
 } from "../services/orderService";
@@ -43,6 +44,11 @@ export default function OrdersPage() {
         queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
     }
 
+    async function handleMarkReady(order: OrderResponse) {
+        await markOrderReady(order.id);
+        queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
+    }
+
     async function handleRejectConfirm() {
         if (!rejectDialogOrder || !rejectionReason.trim()) return;
         await rejectOrder(rejectDialogOrder.id, rejectionReason);
@@ -52,7 +58,8 @@ export default function OrdersPage() {
     }
 
     const pending = orders.filter((o) => o.status === "PENDING_DECISION");
-    const decided = orders.filter((o) => o.status !== "PENDING_DECISION");
+    const accepted = orders.filter((o) => o.status === "ACCEPTED");
+    const decided = orders.filter((o) => o.status === "REJECTED" || o.status === "READY_FOR_PICKUP");
 
     if (isLoading) {
         return (
@@ -92,10 +99,23 @@ export default function OrdersPage() {
                 </Stack>
             )}
 
+            {accepted.length > 0 && (
+                <>
+                    <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                        In Kitchen ({accepted.length})
+                    </Typography>
+                    <Stack spacing={2} mb={4}>
+                        {accepted.map((order) => (
+                            <OrderCard key={order.id} order={order} onMarkReady={handleMarkReady} />
+                        ))}
+                    </Stack>
+                </>
+            )}
+
             {decided.length > 0 && (
                 <>
                     <Typography variant="h6" gutterBottom>
-                        Recent Decisions ({decided.length})
+                        Completed / Rejected ({decided.length})
                     </Typography>
                     <Stack spacing={2}>
                         {decided.map((order) => (
@@ -138,10 +158,11 @@ export default function OrdersPage() {
     );
 }
 
-function statusColor(status: string): "warning" | "success" | "error" | "default" {
+function statusColor(status: string): "warning" | "success" | "error" | "info" | "default" {
     if (status === "PENDING_DECISION") return "warning";
     if (status === "ACCEPTED") return "success";
     if (status === "REJECTED") return "error";
+    if (status === "READY_FOR_PICKUP") return "info";
     return "default";
 }
 
@@ -149,12 +170,15 @@ function OrderCard({
     order,
     onAccept,
     onReject,
+    onMarkReady,
 }: {
     order: OrderResponse;
     onAccept?: (o: OrderResponse) => void;
     onReject?: (o: OrderResponse) => void;
+    onMarkReady?: (o: OrderResponse) => void;
 }) {
     const isPending = order.status === "PENDING_DECISION";
+    const isAccepted = order.status === "ACCEPTED";
     const total = order.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
     return (
@@ -198,6 +222,11 @@ function OrderCard({
                             Reject
                         </Button>
                     </Stack>
+                )}
+                {isAccepted && onMarkReady && (
+                    <Button size="small" variant="contained" color="info" onClick={() => onMarkReady(order)}>
+                        Mark Ready
+                    </Button>
                 )}
             </Stack>
         </Paper>

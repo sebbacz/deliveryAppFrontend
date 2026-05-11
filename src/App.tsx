@@ -6,6 +6,8 @@ import DishDraftEditorPage from "./pages/DishDraftEditorPage";
 import DishManagePage from "./pages/DishManagePage";
 import OwnerDashboard from "./pages/OwnerDashboard";
 import OrdersPage from "./pages/OrdersPage";
+import RestaurantsPage from "./pages/RestaurantsPage";
+import RestaurantDetailPage from "./pages/RestaurantDetailPage";
 
 function App() {
     return (
@@ -18,6 +20,8 @@ function App() {
                 <Route path="/restaurant/:restaurantId/dishes" element={<DishManagePage />} />
                 <Route path="/restaurant/:restaurantId/dishes/new" element={<DishDraftEditorPage />} />
                 <Route path="/restaurant/:restaurantId/orders" element={<OrdersPage />} />
+                <Route path="/restaurants" element={<RestaurantsPage />} />
+                <Route path="/restaurants/:restaurantId" element={<RestaurantDetailPage />} />
             </Routes>
         </Router>
     );

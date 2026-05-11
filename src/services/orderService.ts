@@ -18,7 +18,7 @@ export interface OrderResponse {
     deliveryCity: string;
     deliveryCountry: string;
     contactEmail: string;
-    status: "PENDING_DECISION" | "ACCEPTED" | "REJECTED";
+    status: "PENDING_DECISION" | "ACCEPTED" | "REJECTED" | "READY_FOR_PICKUP";
     rejectionReason: string | null;
     createdAt: string;
     items: OrderItem[];
@@ -35,4 +35,8 @@ export async function acceptOrder(orderId: string): Promise<void> {
 
 export async function rejectOrder(orderId: string, reason: string): Promise<void> {
     await api.post(`/api/orders/${orderId}/reject`, { reason });
+}
+
+export async function markOrderReady(orderId: string): Promise<void> {
+    await api.post(`/api/orders/${orderId}/ready`);
 }

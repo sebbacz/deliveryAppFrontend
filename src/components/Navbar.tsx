@@ -7,14 +7,19 @@ import {
     Button,
     Box,
     Avatar,
+    Badge,
     Chip,
+    IconButton,
 } from "@mui/material";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import SecurityContext from "../auth/SecurityContext";
+import { useBasket } from "../context/BasketContext";
 
 export default function Navbar() {
     const navigate = useNavigate();
     const location = useLocation();
     const { loggedInUser, logout } = useContext(SecurityContext);
+    const { totalItems } = useBasket();
 
     const isOwnerArea = location.pathname.startsWith("/owner") ||
         location.pathname.startsWith("/restaurant") ||
@@ -54,9 +59,21 @@ export default function Navbar() {
                 )}
 
                 {!isOwnerArea && (
-                    <Button color="inherit" onClick={() => navigate("/login")} sx={{ fontWeight: 600 }}>
-                        Owner login
-                    </Button>
+                    <>
+                        <IconButton
+                            color="inherit"
+                            onClick={() => navigate("/basket")}
+                            sx={{ mr: 0.5 }}
+                            aria-label="basket"
+                        >
+                            <Badge badgeContent={totalItems} color="error" max={99}>
+                                <ShoppingCartIcon />
+                            </Badge>
+                        </IconButton>
+                        <Button color="inherit" onClick={() => navigate("/login")} sx={{ fontWeight: 600 }}>
+                            Owner login
+                        </Button>
+                    </>
                 )}
             </Toolbar>
         </AppBar>

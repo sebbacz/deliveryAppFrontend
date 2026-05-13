@@ -24,6 +24,22 @@ export interface OrderResponse {
     items: OrderItem[];
 }
 
+export interface CreateOrderRequest {
+    restaurantId: string;
+    customerName: string;
+    deliveryStreet: string;
+    deliveryNumber: string;
+    deliveryPostalCode: string;
+    deliveryCity: string;
+    deliveryCountry: string;
+    contactEmail: string;
+    items: { dishId: string; dishName: string; price: number; quantity: number }[];
+}
+
+export interface BusynessResponse {
+    pendingOrderCount: number;
+}
+
 export async function getOrdersForRestaurant(restaurantId: string): Promise<OrderResponse[]> {
     const { data } = await api.get(`/api/orders/restaurant/${restaurantId}`);
     return data;
@@ -39,4 +55,19 @@ export async function rejectOrder(orderId: string, reason: string): Promise<void
 
 export async function markOrderReady(orderId: string): Promise<void> {
     await api.post(`/api/orders/${orderId}/ready`);
+}
+
+export async function createOrder(request: CreateOrderRequest): Promise<OrderResponse> {
+    const { data } = await api.post("/unsecured/orders", request);
+    return data;
+}
+
+export async function getOrderById(orderId: string): Promise<OrderResponse> {
+    const { data } = await api.get(`/unsecured/orders/${orderId}`);
+    return data;
+}
+
+export async function getRestaurantBusyness(restaurantId: string): Promise<BusynessResponse> {
+    const { data } = await api.get(`/unsecured/orders/restaurant/${restaurantId}/busyness`);
+    return data;
 }

@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, publicApi } from "./api";
 
 export interface OrderItem {
     id: string;
@@ -58,16 +58,16 @@ export async function markOrderReady(orderId: string): Promise<void> {
 }
 
 export async function createOrder(request: CreateOrderRequest): Promise<OrderResponse> {
-    const { data } = await api.post("/unsecured/orders", request);
+    const { data } = await publicApi.post("/unsecured/orders", request);
     return data;
 }
 
 export async function getOrderById(orderId: string): Promise<OrderResponse> {
-    const { data } = await api.get(`/unsecured/orders/${orderId}`);
+    const { data } = await publicApi.get(`/unsecured/orders/${orderId}`);
     return data;
 }
 
 export async function getRestaurantBusyness(restaurantId: string): Promise<BusynessResponse> {
-    const { data } = await api.get(`/unsecured/orders/restaurant/${restaurantId}/busyness`);
+    const { data } = await publicApi.get(`/unsecured/orders/restaurant/${restaurantId}/busyness`);
     return data;
 }

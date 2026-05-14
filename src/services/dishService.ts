@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, publicApi } from "./api";
 
 export interface DishResponse {
     id: string;
@@ -54,6 +54,6 @@ export async function scheduleDishChanges(restaurantId: string, scheduledAt: str
 }
 
 export async function getPublishedDishes(restaurantId: string): Promise<DishResponse[]> {
-    const { data } = await api.get(`/unsecured/restaurants/${restaurantId}/dishes`);
+    const { data } = await publicApi.get(`/unsecured/restaurants/${restaurantId}/dishes`);
     return data;
 }

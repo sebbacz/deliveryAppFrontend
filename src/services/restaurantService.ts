@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, publicApi } from "./api";
 
 export type RestaurantResponse = {
     id: string;
@@ -54,11 +54,11 @@ export async function closeRestaurant(): Promise<void> {
 }
 
 export async function getAllRestaurants(): Promise<RestaurantResponse[]> {
-    const { data } = await api.get("/unsecured/restaurants");
+    const { data } = await publicApi.get("/unsecured/restaurants");
     return data;
 }
 
 export async function getRestaurantById(id: string): Promise<RestaurantResponse> {
-    const { data } = await api.get(`/unsecured/restaurants/${id}`);
+    const { data } = await publicApi.get(`/unsecured/restaurants/${id}`);
     return data;
 }

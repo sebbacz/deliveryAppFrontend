@@ -211,6 +211,11 @@ export default function OrderTrackingPage() {
                         {order.deliveryStreet} {order.deliveryNumber}, {order.deliveryPostalCode} {order.deliveryCity}, {order.deliveryCountry}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">{order.contactEmail}</Typography>
+                    {order.courierLatitude != null && order.courierLongitude != null && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            Courier location: {order.courierLatitude.toFixed(5)}, {order.courierLongitude.toFixed(5)}
+                        </Typography>
+                    )}
                 </CardContent>
             </Card>
 

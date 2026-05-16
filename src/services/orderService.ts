@@ -18,10 +18,12 @@ export interface OrderResponse {
     deliveryCity: string;
     deliveryCountry: string;
     contactEmail: string;
-    status: "PENDING_DECISION" | "ACCEPTED" | "REJECTED" | "READY_FOR_PICKUP";
+    status: "PENDING_DECISION" | "ACCEPTED" | "REJECTED" | "READY_FOR_PICKUP" | "PICKED_UP" | "DELIVERED";
     rejectionReason: string | null;
     createdAt: string;
     items: OrderItem[];
+    courierLatitude: number | null;
+    courierLongitude: number | null;
 }
 
 export interface CreateOrderRequest {

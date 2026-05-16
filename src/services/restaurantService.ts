@@ -62,3 +62,14 @@ export async function getRestaurantById(id: string): Promise<RestaurantResponse>
     const { data } = await publicApi.get(`/unsecured/restaurants/${id}`);
     return data;
 }
+
+export interface PriceRangePoint {
+    month: string;
+    priceRange: "CHEAP" | "REGULAR" | "EXPENSIVE" | "PREMIUM";
+    averagePrice: number;
+}
+
+export async function getPriceRangeHistory(restaurantId: string): Promise<PriceRangePoint[]> {
+    const { data } = await publicApi.get(`/unsecured/restaurants/${restaurantId}/price-range-history`);
+    return data;
+}

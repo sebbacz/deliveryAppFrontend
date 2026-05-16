@@ -33,6 +33,7 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import { getRestaurantById } from "../services/restaurantService";
 import { getPublishedDishes, type DishResponse } from "../services/dishService";
+import PriceRangeHistoryChart from "../components/PriceRangeHistoryChart";
 import { useBasket } from "../context/BasketContext";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { useGuesstimatedDelivery } from "../hooks/useGuesstimatedDelivery";
@@ -335,6 +336,10 @@ export default function RestaurantDetailPage() {
                     ))}
                 </Grid>
             )}
+
+            {/* US26: Price range evolution chart */}
+            <Divider sx={{ my: 4 }} />
+            <PriceRangeHistoryChart restaurantId={restaurantId!} />
 
             {/* Confirm replace basket dialog */}
             <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({ open: false, pendingDish: null })}>

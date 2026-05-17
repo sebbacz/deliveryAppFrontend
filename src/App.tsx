@@ -11,6 +11,7 @@ import RestaurantDetailPage from "./pages/RestaurantDetailPage";
 import BasketPage from "./pages/BasketPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderTrackingPage from "./pages/OrderTrackingPage";
+import PriceRangeCriteriaPage from "./pages/PriceRangeCriteriaPage";
 import { BasketProvider } from "./context/BasketContext";
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
                     <Route path="/basket" element={<BasketPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
                     <Route path="/order/:orderId/track" element={<OrderTrackingPage />} />
+                    <Route path="/price-range/criteria" element={<PriceRangeCriteriaPage />} />
                 </Routes>
             </Router>
         </BasketProvider>

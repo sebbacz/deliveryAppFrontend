@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useBasket } from "../context/BasketContext";
 import { getPublishedDishes } from "../services/dishService";
+import { getRestaurantById } from "../services/restaurantService";
 import {
     Alert,
     Box,
@@ -35,6 +36,16 @@ export default function BasketPage() {
         refetchInterval: 15_000,
     });
 
+    // Poll restaurant open status so customer knows if they can order
+    const { data: restaurant } = useQuery({
+        queryKey: ["restaurant", basket.restaurantId],
+        queryFn: () => getRestaurantById(basket.restaurantId!),
+        enabled: !!basket.restaurantId,
+        refetchInterval: 15_000,
+    });
+
+    const restaurantClosed = restaurant && !restaurant.isOpen;
+
     if (basket.items.length === 0) {
         return (
             <Container maxWidth="sm" sx={{ py: 8, textAlign: "center" }}>
@@ -54,7 +65,7 @@ export default function BasketPage() {
     });
 
     const hasInvalidItems = invalidItems.length > 0;
-    const canCheckout = !hasInvalidItems && !dishesLoading;
+    const canCheckout = !hasInvalidItems && !dishesLoading && !restaurantClosed;
 
     return (
         <Container maxWidth="sm" sx={{ py: 4 }}>
@@ -68,6 +79,13 @@ export default function BasketPage() {
             <Typography variant="body2" color="text.secondary" mb={3}>
                 From: <strong>{basket.restaurantName}</strong>
             </Typography>
+
+            {/* Restaurant closed banner */}
+            {restaurantClosed && (
+                <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 3 }}>
+                    <strong>{restaurant?.name} is currently closed.</strong> You cannot place an order right now. Check back when they reopen.
+                </Alert>
+            )}
 
             {/* US 21: Warning banner */}
             {hasInvalidItems && (
@@ -158,7 +176,13 @@ export default function BasketPage() {
                 onClick={() => navigate("/checkout")}
                 startIcon={dishesLoading ? <CircularProgress size={18} color="inherit" /> : undefined}
             >
-                {dishesLoading ? "Checking availability…" : hasInvalidItems ? "Remove unavailable items to continue" : "Proceed to Checkout"}
+                {dishesLoading
+                    ? "Checking availability…"
+                    : restaurantClosed
+                    ? "Restaurant is closed"
+                    : hasInvalidItems
+                    ? "Remove unavailable items to continue"
+                    : "Proceed to Checkout"}
             </Button>
         </Container>
     );

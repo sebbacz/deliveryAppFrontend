@@ -11,9 +11,10 @@ import {
     Divider,
     CircularProgress,
 } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createRestaurant } from "../services/restaurantService";
+import { useQuery } from "@tanstack/react-query";
+import { createRestaurant, getMyRestaurant } from "../services/restaurantService";
 import PageLayout from "../components/PageLayout";
 
 type CreateRestaurantForm = {
@@ -37,6 +38,18 @@ export default function CreateRestaurantPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const { data: existingRestaurant, isLoading: checkingRestaurant } = useQuery({
+        queryKey: ["myRestaurant"],
+        queryFn: getMyRestaurant,
+        retry: false,
+    });
+
+    useEffect(() => {
+        if (!checkingRestaurant && existingRestaurant) {
+            navigate("/owner");
+        }
+    }, [existingRestaurant, checkingRestaurant, navigate]);
+
     const { control, handleSubmit } = useForm<CreateRestaurantForm>({
         defaultValues: {
             name: "",
@@ -59,12 +72,26 @@ export default function CreateRestaurantPage() {
         try {
             await createRestaurant(data);
             navigate("/owner");
-        } catch {
-            setError("Could not create restaurant. Please check your connection and try again.");
+        } catch (err: any) {
+            if (err.response?.status === 409) {
+                setError("You already have a restaurant. Each owner can manage exactly one restaurant.");
+            } else {
+                setError("Could not create restaurant. Please check your connection and try again.");
+            }
         } finally {
             setSubmitting(false);
         }
     };
+
+    if (checkingRestaurant) {
+        return (
+            <PageLayout>
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+                    <CircularProgress />
+                </Box>
+            </PageLayout>
+        );
+    }
 
     return (
         <PageLayout>

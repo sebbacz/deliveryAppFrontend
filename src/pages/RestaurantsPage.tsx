@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import {
@@ -24,10 +24,14 @@ import {
 } from "@mui/material";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import ViewListIcon from "@mui/icons-material/ViewList";
+import MapIcon from "@mui/icons-material/Map";
 import { getAllRestaurants, type RestaurantResponse } from "../services/restaurantService";
 import { getPublishedDishes } from "../services/dishService";
 import { getRestaurantBusyness } from "../services/orderService";
 import { useGeolocation } from "../hooks/useGeolocation";
+
+const RestaurantMap = lazy(() => import("../components/RestaurantMap"));
 
 const PRICE_RANGES = ["€", "€€", "€€€", "€€€€"] as const;
 type PriceRange = (typeof PRICE_RANGES)[number];
@@ -45,6 +49,7 @@ export default function RestaurantsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedPriceRanges, setSelectedPriceRanges] = useState<PriceRange[]>([]);
     const [maxDelivery, setMaxDelivery] = useState<number | "">("");
+    const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
     const { position, loading: geoLoading, error: geoError, requestLocation } = useGeolocation();
 
@@ -128,9 +133,24 @@ export default function RestaurantsPage() {
                         {filtered.length} restaurant{filtered.length !== 1 ? "s" : ""} available
                     </Typography>
                 </Box>
-                <Button variant="text" onClick={() => navigate("/")}>
-                    Back
-                </Button>
+                <Stack direction="row" spacing={1} alignItems="center">
+                    <ToggleButtonGroup
+                        value={viewMode}
+                        exclusive
+                        onChange={(_, val) => val && setViewMode(val)}
+                        size="small"
+                    >
+                        <ToggleButton value="list" aria-label="list view">
+                            <ViewListIcon fontSize="small" />
+                        </ToggleButton>
+                        <ToggleButton value="map" aria-label="map view">
+                            <MapIcon fontSize="small" />
+                        </ToggleButton>
+                    </ToggleButtonGroup>
+                    <Button variant="text" onClick={() => navigate("/")}>
+                        Back
+                    </Button>
+                </Stack>
             </Stack>
 
             {/* Filters */}
@@ -210,6 +230,10 @@ export default function RestaurantsPage() {
                 <Box textAlign="center" py={8}>
                     <Typography color="text.secondary">No restaurants found.</Typography>
                 </Box>
+            ) : viewMode === "map" ? (
+                <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
+                    <RestaurantMap restaurants={filtered} />
+                </Suspense>
             ) : (
                 <Grid container spacing={3}>
                     {filtered.map(({ restaurant, priceRange, estimatedMinutes }) => (

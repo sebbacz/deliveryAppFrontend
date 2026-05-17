@@ -140,7 +140,12 @@ export default function CheckoutPage() {
             // US 24: navigate with justPlaced flag so tracking page shows confirmation
             navigate(`/order/${order.id}/track`, { state: { justPlaced: true } });
         } catch (e: any) {
-            setSubmitError(e.response?.data?.message ?? "Failed to place order. Please try again.");
+            const msg = e.response?.data?.message ?? "";
+            if (e.response?.status === 409 && msg.toLowerCase().includes("closed")) {
+                setSubmitError("This restaurant is currently closed. Please try again when they reopen.");
+            } else {
+                setSubmitError(msg || "Failed to place order. Please try again.");
+            }
             setProcessing(false);
         }
     };

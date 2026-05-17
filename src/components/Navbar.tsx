@@ -38,7 +38,8 @@ export default function Navbar() {
     const isOwnerArea =
         location.pathname.startsWith("/owner") ||
         location.pathname.startsWith("/restaurant") ||
-        location.pathname.startsWith("/create-restaurant");
+        location.pathname.startsWith("/create-restaurant") ||
+        location.pathname.startsWith("/price-range");
 
     const isCustomerArea =
         location.pathname.startsWith("/restaurants") ||
@@ -96,6 +97,13 @@ export default function Navbar() {
                                     onClick={() => navigate(`/restaurant/${myRestaurant.id}/orders`)}
                                 >
                                     Orders
+                                </Button>
+                                <Button
+                                    {...NAV_BTN}
+                                    className={active("/price-range/criteria")}
+                                    onClick={() => navigate("/price-range/criteria")}
+                                >
+                                    Price Ranges
                                 </Button>
                             </>
                         )}

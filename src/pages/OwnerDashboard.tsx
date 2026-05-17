@@ -151,6 +151,15 @@ export default function OwnerDashboard() {
                                     color="secondary"
                                 />
                             </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <ActionCard
+                                    title="Price Range Criteria"
+                                    description="Adjust the price thresholds used to classify restaurants into €, €€, €€€, and €€€€ ranges."
+                                    buttonLabel="Manage criteria"
+                                    onClick={() => navigate("/price-range/criteria")}
+                                    color="warning"
+                                />
+                            </Grid>
                         </Grid>
                     </>
                 )}

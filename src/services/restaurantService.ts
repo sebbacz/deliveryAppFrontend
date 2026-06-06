@@ -14,6 +14,8 @@ export type RestaurantResponse = {
     typeOfCuisine: string;
     openingHours: string;
     isOpen: boolean;
+    latitude: number | null;
+    longitude: number | null;
 };
 
 export type CreateRestaurantRequest = {

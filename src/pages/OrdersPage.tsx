@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,6 +17,9 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
 import {
     acceptOrder,
     getOrdersForRestaurant,
@@ -24,6 +27,7 @@ import {
     rejectOrder,
     type OrderResponse,
 } from "../services/orderService";
+import PageLayout from "../components/PageLayout";
 
 export default function OrdersPage() {
     const { restaurantId } = useParams<{ restaurantId: string }>();
@@ -36,7 +40,7 @@ export default function OrdersPage() {
         queryKey: ["orders", restaurantId],
         queryFn: () => getOrdersForRestaurant(restaurantId!),
         enabled: !!restaurantId,
-        refetchInterval: 15_000, // poll every 15s for new orders
+        refetchInterval: 15_000,
     });
 
     async function handleAccept(order: OrderResponse) {
@@ -63,99 +67,116 @@ export default function OrdersPage() {
 
     if (isLoading) {
         return (
-            <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-                <CircularProgress />
-            </Box>
+            <PageLayout>
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
+                    <CircularProgress />
+                </Box>
+            </PageLayout>
         );
     }
 
     return (
-        <Container maxWidth="md" sx={{ py: 4 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h5">Orders</Typography>
-                <Button variant="text" onClick={() => navigate("/owner")}>
-                    Back
+        <PageLayout>
+            <Container maxWidth="md">
+                <Button onClick={() => navigate("/owner")} sx={{ mb: 2 }}>
+                    ← Dashboard
                 </Button>
-            </Stack>
+                <Typography variant="h5" sx={{ mb: 3 }}>Orders</Typography>
 
-            <Typography variant="h6" gutterBottom>
-                Pending Decision ({pending.length})
-            </Typography>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Pending Decision ({pending.length})
+                </Typography>
+                {pending.length === 0 ? (
+                    <Paper variant="outlined" sx={{ p: 3, textAlign: "center", mb: 3 }}>
+                        <Typography color="text.secondary">No pending orders.</Typography>
+                    </Paper>
+                ) : (
+                    <Stack spacing={2} sx={{ mb: 3 }}>
+                        {pending.map((order) => (
+                            <OrderCard
+                                key={order.id}
+                                order={order}
+                                onAccept={handleAccept}
+                                onReject={(o) => { setRejectDialogOrder(o); setRejectionReason(""); }}
+                            />
+                        ))}
+                    </Stack>
+                )}
 
-            {pending.length === 0 ? (
-                <Paper sx={{ p: 3, textAlign: "center", mb: 4 }}>
-                    <Typography color="text.secondary">No pending orders.</Typography>
-                </Paper>
-            ) : (
-                <Stack spacing={2} mb={4}>
-                    {pending.map((order) => (
-                        <OrderCard
-                            key={order.id}
-                            order={order}
-                            onAccept={handleAccept}
-                            onReject={(o) => { setRejectDialogOrder(o); setRejectionReason(""); }}
+                {accepted.length > 0 && (
+                    <>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>In Kitchen ({accepted.length})</Typography>
+                        <Stack spacing={2} sx={{ mb: 3 }}>
+                            {accepted.map((order) => (
+                                <OrderCard key={order.id} order={order} onMarkReady={handleMarkReady} />
+                            ))}
+                        </Stack>
+                    </>
+                )}
+
+                {decided.length > 0 && (
+                    <>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>Completed / Rejected ({decided.length})</Typography>
+                        <Stack spacing={2}>
+                            {decided.map((order) => <OrderCard key={order.id} order={order} />)}
+                        </Stack>
+                    </>
+                )}
+
+                <Dialog open={!!rejectDialogOrder} onClose={() => setRejectDialogOrder(null)} fullWidth maxWidth="sm">
+                    <DialogTitle>Reject order</DialogTitle>
+                    <DialogContent>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Order from <strong>{rejectDialogOrder?.customerName}</strong>. Provide a reason so the customer knows what to do.
+                        </Typography>
+                        <TextField
+                            label="Rejection reason"
+                            multiline
+                            rows={3}
+                            fullWidth
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            placeholder="e.g. Ingredient unavailable, restaurant too busy..."
                         />
-                    ))}
-                </Stack>
-            )}
-
-            {accepted.length > 0 && (
-                <>
-                    <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                        In Kitchen ({accepted.length})
-                    </Typography>
-                    <Stack spacing={2} mb={4}>
-                        {accepted.map((order) => (
-                            <OrderCard key={order.id} order={order} onMarkReady={handleMarkReady} />
-                        ))}
-                    </Stack>
-                </>
-            )}
-
-            {decided.length > 0 && (
-                <>
-                    <Typography variant="h6" gutterBottom>
-                        Completed / Rejected ({decided.length})
-                    </Typography>
-                    <Stack spacing={2}>
-                        {decided.map((order) => (
-                            <OrderCard key={order.id} order={order} />
-                        ))}
-                    </Stack>
-                </>
-            )}
-
-            {/* Reject dialog */}
-            <Dialog open={!!rejectDialogOrder} onClose={() => setRejectDialogOrder(null)} fullWidth maxWidth="sm">
-                <DialogTitle>Reject Order</DialogTitle>
-                <DialogContent>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Order from <strong>{rejectDialogOrder?.customerName}</strong>. Provide a reason so the customer can adjust their basket.
-                    </Typography>
-                    <TextField
-                        label="Rejection reason"
-                        multiline
-                        rows={3}
-                        fullWidth
-                        value={rejectionReason}
-                        onChange={(e) => setRejectionReason(e.target.value)}
-                        placeholder="e.g. Ingredient unavailable, restaurant too busy..."
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setRejectDialogOrder(null)}>Cancel</Button>
-                    <Button
-                        variant="contained"
-                        color="error"
-                        onClick={handleRejectConfirm}
-                        disabled={!rejectionReason.trim()}
-                    >
-                        Reject
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </Container>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setRejectDialogOrder(null)}>Cancel</Button>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            onClick={handleRejectConfirm}
+                            disabled={!rejectionReason.trim()}
+                        >
+                            Reject order
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            </Container>
+        </PageLayout>
     );
+}
+
+function useOrderCountdown(createdAt: string): string {
+    const WINDOW_MS = 5 * 60 * 1000;
+    const [remaining, setRemaining] = useState(() => {
+        const elapsed = Date.now() - new Date(createdAt).getTime();
+        return Math.max(0, WINDOW_MS - elapsed);
+    });
+
+    useEffect(() => {
+        if (remaining <= 0) return;
+        const id = setInterval(() => {
+            const elapsed = Date.now() - new Date(createdAt).getTime();
+            setRemaining(Math.max(0, WINDOW_MS - elapsed));
+        }, 1000);
+        return () => clearInterval(id);
+    }, [createdAt, remaining]);
+
+    if (remaining <= 0) return "Auto-declining...";
+    const secs = Math.ceil(remaining / 1000);
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, "0")} left`;
 }
 
 function statusColor(status: string): "warning" | "success" | "error" | "info" | "default" {
@@ -180,32 +201,38 @@ function OrderCard({
     const isPending = order.status === "PENDING_DECISION";
     const isAccepted = order.status === "ACCEPTED";
     const total = order.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const countdown = useOrderCountdown(order.createdAt);
 
     return (
         <Paper variant="outlined" sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                <Box>
-                    <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
-                        <Typography variant="subtitle1" fontWeight={600}>
-                            {order.customerName}
-                        </Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={2}>
+                <Box sx={{ flex: 1 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }} flexWrap="wrap">
+                        <Typography variant="subtitle2">{order.customerName}</Typography>
                         <Chip label={order.status.replace("_", " ")} size="small" color={statusColor(order.status)} />
+                        {isPending && (
+                            <Chip label={countdown} size="small" color="warning" variant="outlined" />
+                        )}
                     </Stack>
+
                     <Typography variant="body2" color="text.secondary">
                         {order.deliveryStreet} {order.deliveryNumber}, {order.deliveryPostalCode} {order.deliveryCity}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                         {order.contactEmail}
                     </Typography>
+
                     <Divider sx={{ my: 1 }} />
+
                     {order.items.map((item) => (
-                        <Typography key={item.id} variant="body2">
+                        <Typography key={item.id} variant="body2" sx={{ mb: 0.25 }}>
                             {item.quantity}× {item.dishName} — €{(item.price * item.quantity).toFixed(2)}
                         </Typography>
                     ))}
-                    <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5 }}>
+                    <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 600 }}>
                         Total: €{total.toFixed(2)}
                     </Typography>
+
                     {order.rejectionReason && (
                         <Typography variant="body2" color="error" sx={{ mt: 0.5 }}>
                             Reason: {order.rejectionReason}
@@ -213,21 +240,40 @@ function OrderCard({
                     )}
                 </Box>
 
-                {isPending && onAccept && onReject && (
-                    <Stack direction="row" spacing={1}>
-                        <Button size="small" variant="contained" color="success" onClick={() => onAccept(order)}>
-                            Accept
+                <Stack spacing={1}>
+                    {isPending && onAccept && onReject && (
+                        <>
+                            <Button
+                                size="small"
+                                variant="contained"
+                                color="success"
+                                startIcon={<CheckIcon />}
+                                onClick={() => onAccept(order)}
+                            >
+                                Accept
+                            </Button>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                startIcon={<CloseIcon />}
+                                onClick={() => onReject(order)}
+                            >
+                                Reject
+                            </Button>
+                        </>
+                    )}
+                    {isAccepted && onMarkReady && (
+                        <Button
+                            size="small"
+                            variant="contained"
+                            startIcon={<DoneAllIcon />}
+                            onClick={() => onMarkReady(order)}
+                        >
+                            Mark ready
                         </Button>
-                        <Button size="small" variant="outlined" color="error" onClick={() => onReject(order)}>
-                            Reject
-                        </Button>
-                    </Stack>
-                )}
-                {isAccepted && onMarkReady && (
-                    <Button size="small" variant="contained" color="info" onClick={() => onMarkReady(order)}>
-                        Mark Ready
-                    </Button>
-                )}
+                    )}
+                </Stack>
             </Stack>
         </Paper>
     );

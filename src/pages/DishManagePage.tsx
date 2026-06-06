@@ -1,23 +1,27 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Box,
     Button,
     Chip,
+    CircularProgress,
     Container,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
     Divider,
+    Grid,
     Paper,
     Stack,
     TextField,
     Typography,
-    Grid,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 import {
     applyPendingDishChanges,
+    getOwnerDishes,
     markDishBackInStock,
     markDishOutOfStock,
     publishDish,
@@ -25,51 +29,45 @@ import {
     unpublishDish,
     type DishResponse,
 } from "../services/dishService";
-import { getDishes, updateDishState, updateDishStock } from "../services/dishStore";
 import PageLayout from "../components/PageLayout";
 
 export default function DishManagePage() {
     const { restaurantId } = useParams<{ restaurantId: string }>();
     const navigate = useNavigate();
-    const [dishes, setDishes] = useState<DishResponse[]>(() =>
-        restaurantId ? getDishes(restaurantId) : []
-    );
+    const queryClient = useQueryClient();
     const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
     const [scheduledAt, setScheduledAt] = useState("");
 
-    function reload() {
-        if (restaurantId) setDishes(getDishes(restaurantId));
+    const { data: dishes = [], isLoading } = useQuery({
+        queryKey: ["ownerDishes", restaurantId],
+        queryFn: () => getOwnerDishes(restaurantId!),
+        enabled: !!restaurantId,
+    });
+
+    function invalidate() {
+        queryClient.invalidateQueries({ queryKey: ["ownerDishes", restaurantId] });
     }
 
     async function handlePublish(dish: DishResponse) {
-        if (!restaurantId) return;
         await publishDish(dish.id);
-        updateDishState(restaurantId, dish.id, "LIVE");
-        reload();
+        invalidate();
     }
 
     async function handleUnpublish(dish: DishResponse) {
-        if (!restaurantId) return;
         await unpublishDish(dish.id);
-        updateDishState(restaurantId, dish.id, "DRAFT");
-        reload();
+        invalidate();
     }
 
     async function handleStock(dish: DishResponse) {
-        if (!restaurantId) return;
-        if (dish.inStock) {
-            await markDishOutOfStock(dish.id);
-            updateDishStock(restaurantId, dish.id, false);
-        } else {
-            await markDishBackInStock(dish.id);
-            updateDishStock(restaurantId, dish.id, true);
-        }
-        reload();
+        if (dish.inStock) await markDishOutOfStock(dish.id);
+        else await markDishBackInStock(dish.id);
+        invalidate();
     }
 
     async function handleApplyChanges() {
         if (!restaurantId) return;
         await applyPendingDishChanges(restaurantId);
+        invalidate();
     }
 
     async function handleScheduleConfirm() {
@@ -77,57 +75,68 @@ export default function DishManagePage() {
         await scheduleDishChanges(restaurantId, scheduledAt);
         setScheduleDialogOpen(false);
         setScheduledAt("");
+        invalidate();
     }
 
     const liveCount = dishes.filter((d) => d.state === "LIVE").length;
     const draftCount = dishes.filter((d) => d.state === "DRAFT").length;
 
+    if (isLoading) {
+        return (
+            <PageLayout>
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
+                    <CircularProgress />
+                </Box>
+            </PageLayout>
+        );
+    }
+
     return (
         <PageLayout>
             <Container maxWidth="md">
-                {/* Header */}
-                <Box sx={{ mb: 4 }}>
-                    <Button variant="text" onClick={() => navigate("/owner")} sx={{ mb: 1, pl: 0 }}>
-                        ← Dashboard
-                    </Button>
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
-                        <Box>
-                            <Typography variant="h5">Dishes</Typography>
-                            <Stack direction="row" spacing={1.5} sx={{ mt: 0.5 }}>
-                                <Typography variant="body2" color="text.secondary">{liveCount} live</Typography>
-                                {draftCount > 0 && (
-                                    <Typography variant="body2" color="warning.main">{draftCount} draft{draftCount > 1 ? "s" : ""} pending</Typography>
-                                )}
-                            </Stack>
-                        </Box>
+                <Button onClick={() => navigate("/owner")} sx={{ mb: 2 }}>
+                    ← Dashboard
+                </Button>
 
-                        <Stack direction="row" spacing={1} flexWrap="wrap">
-                            {draftCount > 0 && (
-                                <>
-                                    <Button variant="outlined" color="warning" size="small" onClick={handleApplyChanges}>
-                                        Publish all drafts
-                                    </Button>
-                                    <Button variant="outlined" color="info" size="small" onClick={() => setScheduleDialogOpen(true)}>
-                                        Schedule
-                                    </Button>
-                                </>
-                            )}
-                            <Button
-                                variant="contained"
-                                onClick={() => navigate(`/restaurant/${restaurantId}/dishes/new`)}
-                            >
-                                + New dish
-                            </Button>
-                        </Stack>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2, mb: 3 }}>
+                    <Box>
+                        <Typography variant="h5">Dishes</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {liveCount} live · {draftCount} draft{draftCount !== 1 ? "s" : ""} pending
+                        </Typography>
                     </Box>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
+                        {draftCount > 0 && (
+                            <>
+                                <Button variant="outlined" size="small" onClick={handleApplyChanges}>
+                                    Publish all drafts
+                                </Button>
+                                <Button variant="outlined" size="small" onClick={() => setScheduleDialogOpen(true)}>
+                                    Schedule
+                                </Button>
+                            </>
+                        )}
+                        <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<AddIcon />}
+                            onClick={() => navigate(`/restaurant/${restaurantId}/dishes/new`)}
+                        >
+                            New dish
+                        </Button>
+                    </Stack>
                 </Box>
 
-                {/* Dish list */}
                 {dishes.length === 0 ? (
-                    <Paper elevation={0} sx={{ p: 6, textAlign: "center", border: "1.5px dashed", borderColor: "divider" }}>
-                        <Typography color="text.secondary" gutterBottom>No dishes yet</Typography>
-                        <Button variant="contained" onClick={() => navigate(`/restaurant/${restaurantId}/dishes/new`)} sx={{ mt: 1 }}>
-                            Create your first dish
+                    <Paper variant="outlined" sx={{ p: 6, textAlign: "center" }}>
+                        <Typography color="text.secondary" sx={{ mb: 2 }}>
+                            No dishes yet.
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            onClick={() => navigate(`/restaurant/${restaurantId}/dishes/new`)}
+                        >
+                            Create first dish
                         </Button>
                     </Paper>
                 ) : (
@@ -145,12 +154,11 @@ export default function DishManagePage() {
                 )}
             </Container>
 
-            {/* Schedule dialog */}
             <Dialog open={scheduleDialogOpen} onClose={() => setScheduleDialogOpen(false)} maxWidth="xs" fullWidth>
                 <DialogTitle>Schedule pending changes</DialogTitle>
                 <DialogContent>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        All {draftCount} draft(s) will go live at the chosen time.
+                        All {draftCount} draft{draftCount > 1 ? "s" : ""} will go live at the chosen time.
                     </Typography>
                     <TextField
                         label="Go live at"
@@ -162,7 +170,7 @@ export default function DishManagePage() {
                         inputProps={{ min: new Date().toISOString().slice(0, 16) }}
                     />
                 </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
+                <DialogActions>
                     <Button onClick={() => setScheduleDialogOpen(false)}>Cancel</Button>
                     <Button variant="contained" onClick={handleScheduleConfirm} disabled={!scheduledAt}>
                         Schedule
@@ -187,15 +195,7 @@ function DishCard({
     const isLive = dish.state === "LIVE";
 
     return (
-        <Paper
-            elevation={0}
-            sx={{
-                border: "1.5px solid",
-                borderColor: isLive ? "divider" : "warning.light",
-                borderRadius: 2,
-                overflow: "hidden",
-            }}
-        >
+        <Paper variant="outlined">
             <Grid container>
                 {dish.pictureUrl && (
                     <Grid size={{ xs: 12, sm: "auto" }}>
@@ -203,50 +203,54 @@ function DishCard({
                             component="img"
                             src={dish.pictureUrl}
                             alt={dish.name}
-                            sx={{ width: { xs: "100%", sm: 100 }, height: { xs: 160, sm: "100%" }, objectFit: "cover", display: "block" }}
+                            sx={{
+                                width: { xs: "100%", sm: 96 },
+                                height: { xs: 120, sm: "100%" },
+                                objectFit: "cover",
+                                display: "block",
+                            }}
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                         />
                     </Grid>
                 )}
                 <Grid size="grow">
-                    <Box sx={{ p: 2.5 }}>
-                        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 0.5 }}>
-                                    <Typography variant="subtitle1" noWrap>{dish.name}</Typography>
+                    <Box sx={{ p: 2 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1, flexWrap: "wrap" }}>
+                            <Box>
+                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                                    <Typography variant="subtitle1">{dish.name}</Typography>
                                     <Chip
                                         label={dish.state}
                                         size="small"
-                                        color={isLive ? "success" : "default"}
-                                        variant={isLive ? "filled" : "outlined"}
+                                        color={isLive ? "success" : "warning"}
+                                        variant="outlined"
                                     />
                                     {isLive && (
                                         <Chip
                                             label={dish.inStock ? "In stock" : "Out of stock"}
                                             size="small"
-                                            color={dish.inStock ? "primary" : "error"}
+                                            color={dish.inStock ? "info" : "error"}
                                             variant="outlined"
                                         />
                                     )}
                                 </Stack>
                                 <Typography variant="body2" color="text.secondary">
-                                    {dish.type.charAt(0) + dish.type.slice(1).toLowerCase()} &bull; <strong>€{dish.price.toFixed(2)}</strong>
+                                    {dish.type.charAt(0) + dish.type.slice(1).toLowerCase()} · €{dish.price.toFixed(2)}
                                 </Typography>
                                 {dish.description && (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }} noWrap>
+                                    <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
                                         {dish.description}
                                     </Typography>
                                 )}
                                 {dish.foodTags?.length > 0 && (
                                     <Stack direction="row" spacing={0.5} sx={{ mt: 1 }} flexWrap="wrap">
                                         {dish.foodTags.map((tag) => (
-                                            <Chip key={tag} label={tag} size="small" variant="outlined" sx={{ fontSize: 11 }} />
+                                            <Chip key={tag} label={tag} size="small" variant="outlined" />
                                         ))}
                                     </Stack>
                                 )}
                             </Box>
 
-                            {/* Actions */}
                             <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
                                 {isLive ? (
                                     <>

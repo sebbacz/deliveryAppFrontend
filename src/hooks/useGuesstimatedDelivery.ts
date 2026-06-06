@@ -36,12 +36,19 @@ export function useGuesstimatedDelivery(restaurant: RestaurantResponse | undefin
         ? `${restaurant.street} ${restaurant.number}, ${restaurant.postalCode} ${restaurant.city}, ${restaurant.country}`
         : "";
 
-    const { data: restaurantCoords } = useQuery({
+    // Use backend-stored coordinates when available; fall back to Nominatim geocoding
+    const hasStoredCoords = !!(restaurant?.latitude && restaurant?.longitude);
+
+    const { data: geocodedCoords } = useQuery({
         queryKey: ["geocode", restaurantAddress],
         queryFn: () => geocodeAddress(restaurantAddress),
-        enabled: !!restaurant && !!customerPos,
+        enabled: !!restaurant && !!customerPos && !hasStoredCoords,
         staleTime: 60 * 60 * 1000, // 1 hour
     });
+
+    const restaurantCoords = hasStoredCoords && restaurant
+        ? { latitude: restaurant.latitude!, longitude: restaurant.longitude! }
+        : geocodedCoords;
 
     const { data: busyness } = useQuery({
         queryKey: ["busyness", restaurant?.id],

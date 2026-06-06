@@ -9,12 +9,10 @@ import {
     Alert,
     Box,
     Button,
-    Card,
-    CardContent,
     CircularProgress,
-    Container,
     Divider,
     Grid,
+    Paper,
     Stack,
     Step,
     StepLabel,
@@ -22,10 +20,10 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
-import LockIcon from "@mui/icons-material/Lock";
-import CreditCardIcon from "@mui/icons-material/CreditCard";
-
-// ─── Delivery form ────────────────────────────────────────────────────────────
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import CreditCardOutlinedIcon from "@mui/icons-material/CreditCardOutlined";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import PageLayout from "../components/PageLayout";
 
 interface DeliveryFormData {
     customerName: string;
@@ -37,10 +35,12 @@ interface DeliveryFormData {
     contactEmail: string;
 }
 
-// ─── Payment helpers ──────────────────────────────────────────────────────────
-
 function formatCardNumber(value: string) {
-    return value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+    return value
+        .replace(/\D/g, "")
+        .slice(0, 16)
+        .replace(/(.{4})/g, "$1 ")
+        .trim();
 }
 
 function formatExpiry(value: string) {
@@ -54,12 +54,11 @@ function validateCard(cardNumber: string, expiry: string, cvc: string): string |
     const [mm, yy] = expiry.split("/");
     const month = parseInt(mm, 10);
     const year = parseInt("20" + yy, 10);
-    if (!mm || !yy || month < 1 || month > 12 || year < new Date().getFullYear()) return "Invalid expiry date.";
+    if (!mm || !yy || month < 1 || month > 12 || year < new Date().getFullYear())
+        return "Invalid expiry date.";
     if (cvc.length < 3) return "CVC must be 3 digits.";
     return null;
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 const STEPS = ["Delivery details", "Payment"];
 
@@ -70,7 +69,6 @@ export default function CheckoutPage() {
     const [activeStep, setActiveStep] = useState(0);
     const [deliveryData, setDeliveryData] = useState<DeliveryFormData | null>(null);
 
-    // Payment state
     const [cardNumber, setCardNumber] = useState("");
     const [expiry, setExpiry] = useState("");
     const [cvc, setCvc] = useState("");
@@ -80,7 +78,6 @@ export default function CheckoutPage() {
 
     const { register, handleSubmit, formState: { errors } } = useForm<DeliveryFormData>();
 
-    // US 21: also validate on checkout page — poll dishes
     const { data: liveDishes = [] } = useQuery({
         queryKey: ["publicDishes", basket.restaurantId],
         queryFn: () => getPublishedDishes(basket.restaurantId!),
@@ -93,20 +90,17 @@ export default function CheckoutPage() {
         return null;
     }
 
-    // US 21: detect items that went bad since the page opened
     const invalidItems = basket.items.filter((item) => {
         const live = liveDishes.find((d) => d.id === item.dishId);
         return !live || !live.inStock;
     });
 
-    // ── Step 1: delivery form submit ──────────────────────────────────────────
     const onDeliverySubmit = (data: DeliveryFormData) => {
-        if (invalidItems.length > 0) return; // guard
+        if (invalidItems.length > 0) return;
         setDeliveryData(data);
         setActiveStep(1);
     };
 
-    // ── Step 2: payment + order creation ─────────────────────────────────────
     const onPay = async () => {
         setPaymentError(null);
         setSubmitError(null);
@@ -117,7 +111,6 @@ export default function CheckoutPage() {
 
         setProcessing(true);
         try {
-            // Simulate payment processing (US 23 — mock payment provider)
             await new Promise((res) => setTimeout(res, 1500));
 
             const order = await createOrder({
@@ -137,7 +130,6 @@ export default function CheckoutPage() {
                 })),
             });
             clearBasket();
-            // US 24: navigate with justPlaced flag so tracking page shows confirmation
             navigate(`/order/${order.id}/track`, { state: { justPlaced: true } });
         } catch (e: any) {
             const msg = e.response?.data?.message ?? "";
@@ -150,209 +142,177 @@ export default function CheckoutPage() {
         }
     };
 
-    // ── Order summary sidebar ─────────────────────────────────────────────────
     const OrderSummary = () => (
-        <Card variant="outlined">
-            <CardContent>
-                <Typography variant="h6" fontWeight={600} mb={2}>Order summary</Typography>
-                <Typography variant="body2" color="text.secondary" mb={2}>
-                    From: <strong>{basket.restaurantName}</strong>
-                </Typography>
-                <Stack spacing={1} mb={2}>
-                    {basket.items.map((item) => (
-                        <Stack key={item.dishId} direction="row" justifyContent="space-between">
-                            <Typography variant="body2">{item.quantity}× {item.dishName}</Typography>
-                            <Typography variant="body2" fontWeight={600}>
-                                €{(item.price * item.quantity).toFixed(2)}
-                            </Typography>
-                        </Stack>
-                    ))}
-                </Stack>
-                <Divider sx={{ mb: 1.5 }} />
-                <Stack direction="row" justifyContent="space-between">
-                    <Typography fontWeight={700}>Total</Typography>
-                    <Typography fontWeight={700} color="primary">€{totalPrice.toFixed(2)}</Typography>
-                </Stack>
-            </CardContent>
-        </Card>
+        <Paper variant="outlined" sx={{ p: 2.5 }}>
+            <Typography variant="subtitle2" gutterBottom>Order summary</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                From <strong>{basket.restaurantName}</strong>
+            </Typography>
+            <Stack spacing={1} mb={2}>
+                {basket.items.map((item) => (
+                    <Stack key={item.dishId} direction="row" justifyContent="space-between">
+                        <Typography variant="body2" color="text.secondary">
+                            {item.quantity}× {item.dishName}
+                        </Typography>
+                        <Typography variant="body2">€{(item.price * item.quantity).toFixed(2)}</Typography>
+                    </Stack>
+                ))}
+            </Stack>
+            <Divider sx={{ mb: 1.5 }} />
+            <Stack direction="row" justifyContent="space-between">
+                <Typography variant="subtitle2">Total</Typography>
+                <Typography variant="subtitle2">€{totalPrice.toFixed(2)}</Typography>
+            </Stack>
+        </Paper>
     );
 
     return (
-        <Container maxWidth="md" sx={{ py: 4 }}>
-            <Button variant="text" onClick={() => activeStep === 0 ? navigate("/basket") : setActiveStep(0)} sx={{ mb: 2 }}>
-                ← {activeStep === 0 ? "Back to basket" : "Back to delivery"}
-            </Button>
+        <PageLayout>
+            <Box sx={{ maxWidth: 860, mx: "auto" }}>
+                <Button
+                    startIcon={<ArrowBackIcon />}
+                    onClick={() => activeStep === 0 ? navigate("/basket") : setActiveStep(0)}
+                    sx={{ mb: 3 }}
+                >
+                    {activeStep === 0 ? "Back to basket" : "Back to delivery"}
+                </Button>
 
-            <Typography variant="h4" fontWeight={700} mb={3}>Checkout</Typography>
+                <Typography variant="h5" sx={{ mb: 1 }}>Checkout</Typography>
 
-            <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-                {STEPS.map((label) => (
-                    <Step key={label}>
-                        <StepLabel>{label}</StepLabel>
-                    </Step>
-                ))}
-            </Stepper>
+                <Stepper activeStep={activeStep} sx={{ maxWidth: 400, mb: 3 }}>
+                    {STEPS.map((label) => (
+                        <Step key={label}><StepLabel>{label}</StepLabel></Step>
+                    ))}
+                </Stepper>
 
-            {/* US 21: warn if items became invalid */}
-            {invalidItems.length > 0 && (
-                <Alert severity="error" sx={{ mb: 3 }} action={
-                    <Button color="inherit" size="small" onClick={() => navigate("/basket")}>
-                        Fix basket
-                    </Button>
-                }>
-                    Some items in your basket are no longer available. Please fix your basket before continuing.
-                </Alert>
-            )}
+                {invalidItems.length > 0 && (
+                    <Alert severity="error" sx={{ mb: 3 }}
+                        action={<Button color="inherit" size="small" onClick={() => navigate("/basket")}>Fix basket</Button>}
+                    >
+                        Some items in your basket are no longer available.
+                    </Alert>
+                )}
 
-            <Grid container spacing={4}>
-                {/* ── Step 1: Delivery ── */}
-                {activeStep === 0 && (
-                    <Grid size={{ xs: 12, md: 7 }}>
-                        <Typography variant="h6" fontWeight={600} mb={2}>Delivery details</Typography>
-                        <Box component="form" onSubmit={handleSubmit(onDeliverySubmit)}>
-                            <Stack spacing={2}>
-                                <TextField
-                                    label="Full name"
-                                    fullWidth
-                                    {...register("customerName", { required: "Name is required" })}
-                                    error={!!errors.customerName}
-                                    helperText={errors.customerName?.message}
-                                />
-                                <Stack direction="row" spacing={2}>
-                                    <TextField
-                                        label="Street"
-                                        fullWidth
-                                        {...register("deliveryStreet", { required: "Street is required" })}
-                                        error={!!errors.deliveryStreet}
-                                        helperText={errors.deliveryStreet?.message}
-                                    />
-                                    <TextField
-                                        label="No."
-                                        sx={{ width: 110 }}
-                                        {...register("deliveryNumber", { required: "Required" })}
-                                        error={!!errors.deliveryNumber}
-                                        helperText={errors.deliveryNumber?.message}
-                                    />
+                <Grid container spacing={3}>
+                    {activeStep === 0 && (
+                        <Grid size={{ xs: 12, md: 7 }}>
+                            <Paper variant="outlined" sx={{ p: 3 }}>
+                                <Typography variant="h6" sx={{ mb: 2 }}>Delivery details</Typography>
+                                <Box component="form" onSubmit={handleSubmit(onDeliverySubmit)}>
+                                    <Stack spacing={2}>
+                                        <TextField
+                                            label="Full name" fullWidth
+                                            {...register("customerName", { required: "Name is required" })}
+                                            error={!!errors.customerName} helperText={errors.customerName?.message}
+                                        />
+                                        <Stack direction="row" spacing={2}>
+                                            <TextField
+                                                label="Street" fullWidth
+                                                {...register("deliveryStreet", { required: "Street is required" })}
+                                                error={!!errors.deliveryStreet} helperText={errors.deliveryStreet?.message}
+                                            />
+                                            <TextField
+                                                label="No." sx={{ width: 100 }}
+                                                {...register("deliveryNumber", { required: "Required" })}
+                                                error={!!errors.deliveryNumber} helperText={errors.deliveryNumber?.message}
+                                            />
+                                        </Stack>
+                                        <Stack direction="row" spacing={2}>
+                                            <TextField
+                                                label="Postal code" sx={{ width: 150 }}
+                                                {...register("deliveryPostalCode", { required: "Required" })}
+                                                error={!!errors.deliveryPostalCode} helperText={errors.deliveryPostalCode?.message}
+                                            />
+                                            <TextField
+                                                label="City" fullWidth
+                                                {...register("deliveryCity", { required: "City is required" })}
+                                                error={!!errors.deliveryCity} helperText={errors.deliveryCity?.message}
+                                            />
+                                        </Stack>
+                                        <TextField
+                                            label="Country" fullWidth
+                                            {...register("deliveryCountry", { required: "Country is required" })}
+                                            error={!!errors.deliveryCountry} helperText={errors.deliveryCountry?.message}
+                                        />
+                                        <TextField
+                                            label="Contact email" type="email" fullWidth
+                                            {...register("contactEmail", {
+                                                required: "Email is required",
+                                                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Invalid email" },
+                                            })}
+                                            error={!!errors.contactEmail} helperText={errors.contactEmail?.message}
+                                        />
+                                        <Button
+                                            type="submit" variant="contained" size="large" fullWidth
+                                            disabled={invalidItems.length > 0} sx={{ mt: 1 }}
+                                        >
+                                            Continue to payment
+                                        </Button>
+                                    </Stack>
+                                </Box>
+                            </Paper>
+                        </Grid>
+                    )}
+
+                    {activeStep === 1 && (
+                        <Grid size={{ xs: 12, md: 7 }}>
+                            <Paper variant="outlined" sx={{ p: 3 }}>
+                                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                                    <LockOutlinedIcon fontSize="small" color="action" />
+                                    <Typography variant="h6">Secure payment</Typography>
                                 </Stack>
-                                <Stack direction="row" spacing={2}>
+
+                                <Alert severity="info" icon={<CreditCardOutlinedIcon fontSize="small" />} sx={{ mb: 2 }}>
+                                    Test card: <code>4242 4242 4242 4242 · 12/28 · 123</code>
+                                </Alert>
+
+                                <Stack spacing={2}>
                                     <TextField
-                                        label="Postal code"
-                                        sx={{ width: 160 }}
-                                        {...register("deliveryPostalCode", { required: "Required" })}
-                                        error={!!errors.deliveryPostalCode}
-                                        helperText={errors.deliveryPostalCode?.message}
+                                        label="Card number" fullWidth value={cardNumber}
+                                        onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                                        inputProps={{ maxLength: 19, inputMode: "numeric" }}
+                                        placeholder="1234 5678 9012 3456"
                                     />
-                                    <TextField
-                                        label="City"
-                                        fullWidth
-                                        {...register("deliveryCity", { required: "City is required" })}
-                                        error={!!errors.deliveryCity}
-                                        helperText={errors.deliveryCity?.message}
-                                    />
+                                    <Stack direction="row" spacing={2}>
+                                        <TextField
+                                            label="Expiry (MM/YY)" sx={{ width: 160 }} value={expiry}
+                                            onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+                                            inputProps={{ maxLength: 5, inputMode: "numeric" }}
+                                            placeholder="MM/YY"
+                                        />
+                                        <TextField
+                                            label="CVC" sx={{ width: 110 }} value={cvc}
+                                            onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                                            inputProps={{ maxLength: 3, inputMode: "numeric" }}
+                                            placeholder="123"
+                                        />
+                                    </Stack>
                                 </Stack>
-                                <TextField
-                                    label="Country"
-                                    fullWidth
-                                    {...register("deliveryCountry", { required: "Country is required" })}
-                                    error={!!errors.deliveryCountry}
-                                    helperText={errors.deliveryCountry?.message}
-                                />
-                                <TextField
-                                    label="Contact email"
-                                    type="email"
-                                    fullWidth
-                                    {...register("contactEmail", {
-                                        required: "Email is required",
-                                        pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Invalid email" },
-                                    })}
-                                    error={!!errors.contactEmail}
-                                    helperText={errors.contactEmail?.message}
-                                />
+
+                                {paymentError && <Alert severity="error" sx={{ mt: 2 }}>{paymentError}</Alert>}
+                                {submitError && <Alert severity="error" sx={{ mt: 2 }}>{submitError}</Alert>}
+
                                 <Button
-                                    type="submit"
-                                    variant="contained"
-                                    size="large"
-                                    fullWidth
-                                    disabled={invalidItems.length > 0}
+                                    variant="contained" color="success" size="large" fullWidth
+                                    disabled={processing || invalidItems.length > 0}
+                                    onClick={onPay} sx={{ mt: 3 }}
+                                    startIcon={processing ? <CircularProgress size={16} color="inherit" /> : <LockOutlinedIcon fontSize="small" />}
                                 >
-                                    Continue to payment
+                                    {processing ? "Processing payment…" : `Pay €${totalPrice.toFixed(2)}`}
                                 </Button>
-                            </Stack>
-                        </Box>
-                    </Grid>
-                )}
 
-                {/* ── Step 2: Payment (US 23) ── */}
-                {activeStep === 1 && (
-                    <Grid size={{ xs: 12, md: 7 }}>
-                        <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                            <LockIcon fontSize="small" color="success" />
-                            <Typography variant="h6" fontWeight={600}>Secure payment</Typography>
-                        </Stack>
-
-                        <Card variant="outlined" sx={{ p: 2, mb: 2, bgcolor: "grey.50" }}>
-                            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                                <CreditCardIcon color="action" />
-                                <Typography variant="body2" color="text.secondary">
-                                    Test card: 4242 4242 4242 4242 · 12/28 · 123
+                                <Typography variant="caption" color="text.secondary" display="block" textAlign="center" mt={1}>
+                                    Simulated payment — your data is not stored.
                                 </Typography>
-                            </Stack>
-                            <Stack spacing={2}>
-                                <TextField
-                                    label="Card number"
-                                    fullWidth
-                                    value={cardNumber}
-                                    onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                                    inputProps={{ maxLength: 19, inputMode: "numeric" }}
-                                    placeholder="1234 5678 9012 3456"
-                                />
-                                <Stack direction="row" spacing={2}>
-                                    <TextField
-                                        label="Expiry (MM/YY)"
-                                        sx={{ width: 160 }}
-                                        value={expiry}
-                                        onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-                                        inputProps={{ maxLength: 5, inputMode: "numeric" }}
-                                        placeholder="MM/YY"
-                                    />
-                                    <TextField
-                                        label="CVC"
-                                        sx={{ width: 110 }}
-                                        value={cvc}
-                                        onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 3))}
-                                        inputProps={{ maxLength: 3, inputMode: "numeric" }}
-                                        placeholder="123"
-                                    />
-                                </Stack>
-                            </Stack>
-                        </Card>
+                            </Paper>
+                        </Grid>
+                    )}
 
-                        {paymentError && <Alert severity="error" sx={{ mb: 2 }}>{paymentError}</Alert>}
-                        {submitError && <Alert severity="error" sx={{ mb: 2 }}>{submitError}</Alert>}
-
-                        <Button
-                            variant="contained"
-                            size="large"
-                            fullWidth
-                            disabled={processing || invalidItems.length > 0}
-                            onClick={onPay}
-                            startIcon={processing ? <CircularProgress size={18} color="inherit" /> : <LockIcon />}
-                            color="success"
-                        >
-                            {processing ? "Processing payment…" : `Pay €${totalPrice.toFixed(2)}`}
-                        </Button>
-
-                        <Typography variant="caption" color="text.disabled" display="block" textAlign="center" mt={1}>
-                            Your payment is encrypted and secure. This is a simulated payment.
-                        </Typography>
+                    <Grid size={{ xs: 12, md: 5 }}>
+                        <OrderSummary />
                     </Grid>
-                )}
-
-                {/* Summary sidebar always visible */}
-                <Grid size={{ xs: 12, md: 5 }}>
-                    <OrderSummary />
                 </Grid>
-            </Grid>
-        </Container>
+            </Box>
+        </PageLayout>
     );
 }

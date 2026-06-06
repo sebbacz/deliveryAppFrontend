@@ -67,35 +67,39 @@ export default function PriceRangeHistoryChart({ restaurantId }: Props) {
 
     return (
         <Box>
-            <Typography variant="h6" fontWeight={700} mb={1}>
+            <Typography variant="h6" sx={{ mb: 0.75 }}>
                 Price range evolution
             </Typography>
-            <Typography variant="body2" color="text.secondary" mb={2}>
+            <Typography variant="body2" color="text.secondary" mb={2.5}>
                 Shows how this restaurant's price category has evolved as market criteria changed.
             </Typography>
             <ResponsiveContainer width="100%" height={240}>
                 <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e8e5df" />
                     <XAxis
                         dataKey="month"
-                        tick={{ fontSize: 11 }}
+                        tick={{ fontSize: 11, fill: "#6b6560" }}
+                        axisLine={{ stroke: "#d0ccc5" }}
+                        tickLine={{ stroke: "#d0ccc5" }}
                         interval="preserveStartEnd"
                     />
                     <YAxis
                         domain={[1, 4]}
                         ticks={[1, 2, 3, 4]}
                         tickFormatter={formatYAxis}
-                        tick={{ fontSize: 13 }}
+                        tick={{ fontSize: 13, fill: "#6b6560" }}
+                        axisLine={{ stroke: "#d0ccc5" }}
+                        tickLine={{ stroke: "#d0ccc5" }}
                         width={36}
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Line
                         type="stepAfter"
                         dataKey="numericRange"
-                        stroke="#e65100"
+                        stroke="#1565c0"
                         strokeWidth={2.5}
-                        dot={{ r: 4, fill: "#e65100" }}
-                        activeDot={{ r: 6 }}
+                        dot={{ r: 4, fill: "#1565c0", strokeWidth: 0 }}
+                        activeDot={{ r: 6, fill: "#1976d2", strokeWidth: 0 }}
                         name="Price range"
                     />
                 </LineChart>

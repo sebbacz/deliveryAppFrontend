@@ -57,3 +57,8 @@ export async function getPublishedDishes(restaurantId: string): Promise<DishResp
     const { data } = await publicApi.get(`/unsecured/restaurants/${restaurantId}/dishes`);
     return data;
 }
+
+export async function getOwnerDishes(restaurantId: string): Promise<DishResponse[]> {
+    const { data } = await api.get(`/api/dishes/restaurant/${restaurantId}`);
+    return data;
+}

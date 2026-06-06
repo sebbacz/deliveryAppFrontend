@@ -7,27 +7,13 @@ import {
     Typography,
     Button,
     Box,
-    Avatar,
     Badge,
-    Chip,
-    Divider,
     IconButton,
 } from "@mui/material";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import SecurityContext from "../auth/SecurityContext";
 import { useBasket } from "../context/BasketContext";
 import { getMyRestaurant } from "../services/restaurantService";
-
-const NAV_BTN = {
-    color: "inherit" as const,
-    size: "small" as const,
-    sx: {
-        fontWeight: 500,
-        opacity: 0.85,
-        "&:hover": { opacity: 1, bgcolor: "rgba(255,255,255,0.1)" },
-        "&.active": { opacity: 1, fontWeight: 700 },
-    },
-};
 
 export default function Navbar() {
     const navigate = useNavigate();
@@ -47,7 +33,6 @@ export default function Navbar() {
         location.pathname.startsWith("/checkout") ||
         location.pathname.startsWith("/order");
 
-    // Fetch restaurant ID for owner nav links
     const { data: myRestaurant } = useQuery({
         queryKey: ["myRestaurant"],
         queryFn: getMyRestaurant,
@@ -55,53 +40,50 @@ export default function Navbar() {
         staleTime: 5 * 60 * 1000,
     });
 
-    const active = (path: string) =>
-        location.pathname === path || location.pathname.startsWith(path + "/")
-            ? "active"
-            : "";
-
     return (
-        <AppBar position="sticky" elevation={0} sx={{ bgcolor: "primary.main", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
-            <Toolbar sx={{ gap: 1 }}>
-                {/* Logo */}
+        <AppBar position="fixed" color="primary">
+            <Toolbar sx={{ gap: 0.5 }}>
                 <Typography
-                    variant="h6"
-                    sx={{ cursor: "pointer", fontWeight: 700, letterSpacing: -0.5, mr: 2 }}
                     onClick={() => navigate("/")}
+                    sx={{
+                        cursor: "pointer",
+                        mr: 2,
+                        fontFamily: '"Cormorant Garamond", serif',
+                        fontWeight: 600,
+                        fontSize: "1.35rem",
+                        letterSpacing: "0.01em",
+                        fontStyle: "italic",
+                        color: "primary.contrastText",
+                    }}
                 >
-                    KDG
+                    Keep Dishes Going
                 </Typography>
 
-                {/* Owner nav links */}
                 {isOwnerArea && loggedInUser && (
                     <>
-                        <Button
-                            {...NAV_BTN}
-                            className={active("/owner")}
-                            onClick={() => navigate("/owner")}
-                        >
+                        <Button color="inherit" onClick={() => navigate("/owner")} sx={{ opacity: 0.9 }}>
                             Dashboard
                         </Button>
                         {myRestaurant && (
                             <>
                                 <Button
-                                    {...NAV_BTN}
-                                    className={active(`/restaurant/${myRestaurant.id}/dishes`)}
+                                    color="inherit"
                                     onClick={() => navigate(`/restaurant/${myRestaurant.id}/dishes`)}
+                                    sx={{ opacity: 0.9 }}
                                 >
                                     Dishes
                                 </Button>
                                 <Button
-                                    {...NAV_BTN}
-                                    className={active(`/restaurant/${myRestaurant.id}/orders`)}
+                                    color="inherit"
                                     onClick={() => navigate(`/restaurant/${myRestaurant.id}/orders`)}
+                                    sx={{ opacity: 0.9 }}
                                 >
                                     Orders
                                 </Button>
                                 <Button
-                                    {...NAV_BTN}
-                                    className={active("/price-range/criteria")}
+                                    color="inherit"
                                     onClick={() => navigate("/price-range/criteria")}
+                                    sx={{ opacity: 0.9 }}
                                 >
                                     Price Ranges
                                 </Button>
@@ -110,62 +92,32 @@ export default function Navbar() {
                     </>
                 )}
 
-                {/* Customer nav links */}
                 {isCustomerArea && (
-                    <>
-                        <Button
-                            {...NAV_BTN}
-                            className={active("/restaurants")}
-                            onClick={() => navigate("/restaurants")}
-                        >
-                            Restaurants
-                        </Button>
-                    </>
+                    <Button color="inherit" onClick={() => navigate("/restaurants")} sx={{ opacity: 0.9 }}>
+                        Restaurants
+                    </Button>
                 )}
 
-                {/* Spacer */}
                 <Box sx={{ flexGrow: 1 }} />
 
-                {/* Customer right side */}
                 {isCustomerArea && (
-                    <IconButton
-                        color="inherit"
-                        onClick={() => navigate("/basket")}
-                        aria-label="basket"
-                    >
-                        <Badge badgeContent={totalItems} color="error" max={99}>
-                            <ShoppingCartIcon />
+                    <IconButton color="inherit" onClick={() => navigate("/basket")}>
+                        <Badge badgeContent={totalItems} color="error">
+                            <ShoppingCartOutlinedIcon />
                         </Badge>
                     </IconButton>
                 )}
 
-                {/* Owner right side */}
                 {isOwnerArea && loggedInUser && (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                        <Divider orientation="vertical" flexItem sx={{ borderColor: "rgba(255,255,255,0.2)", mx: 0.5 }} />
-                        <Chip
-                            avatar={
-                                <Avatar sx={{ bgcolor: "rgba(255,255,255,0.3)", color: "white !important", fontSize: 12 }}>
-                                    {loggedInUser.name.charAt(0).toUpperCase()}
-                                </Avatar>
-                            }
-                            label={loggedInUser.name}
-                            size="small"
-                            sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)", border: "1px solid" }}
-                        />
-                        <Button
-                            color="inherit"
-                            size="small"
-                            variant="outlined"
-                            onClick={logout}
-                            sx={{ borderColor: "rgba(255,255,255,0.4)", "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.1)" } }}
-                        >
+                    <>
+                        <Typography variant="body2" sx={{ opacity: 0.85 }}>
+                            {loggedInUser.name}
+                        </Typography>
+                        <Button color="inherit" onClick={logout} sx={{ opacity: 0.9 }}>
                             Sign out
                         </Button>
-                    </Box>
+                    </>
                 )}
-
-                {/* Landing page — no extra nav items, the page cards handle routing */}
             </Toolbar>
         </AppBar>
     );

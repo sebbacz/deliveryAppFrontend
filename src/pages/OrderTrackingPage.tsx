@@ -136,40 +136,18 @@ export default function OrderTrackingPage() {
                         </Box>
 
                         {/* Tracking link */}
-                        <Box sx={{ px: 3, py: 2, bgcolor: "success.50", borderTop: "1px solid", borderColor: "success.light" }}>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Bookmark this link to track your order at any time:
+                        <Box sx={{ px: 3, py: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
+                                Your tracking link:
                             </Typography>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                <Typography
-                                    variant="body2"
-                                    sx={{
-                                        fontFamily: "monospace",
-                                        fontSize: "0.78rem",
-                                        wordBreak: "break-all",
-                                        flex: 1,
-                                        bgcolor: "white",
-                                        border: "1px solid",
-                                        borderColor: "divider",
-                                        borderRadius: 1,
-                                        px: 1.5,
-                                        py: 0.75,
-                                    }}
-                                >
-                                    {trackingUrl}
-                                </Typography>
-                                <Button
-                                    size="small"
-                                    variant="outlined"
-                                    color="success"
-                                    startIcon={<ContentCopyIcon fontSize="small" />}
-                                    onClick={handleCopyLink}
-                                    sx={{ flexShrink: 0 }}
-                                >
-                                    Copy
-                                </Button>
-                            </Stack>
+                            <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: "0.78rem", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {trackingUrl}
+                            </Typography>
+                            <Button size="small" variant="outlined" color="success" startIcon={<ContentCopyIcon fontSize="small" />} onClick={handleCopyLink} sx={{ flexShrink: 0 }}>
+                                Copy
+                            </Button>
                         </Box>
+
                     </Paper>
                 )}
 

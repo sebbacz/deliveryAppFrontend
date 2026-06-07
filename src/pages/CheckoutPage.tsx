@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
@@ -75,6 +75,7 @@ export default function CheckoutPage() {
     const [paymentError, setPaymentError] = useState<string | null>(null);
     const [processing, setProcessing] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
+    const paymentComplete = useRef(false);
 
     const { register, handleSubmit, formState: { errors } } = useForm<DeliveryFormData>();
 
@@ -85,10 +86,11 @@ export default function CheckoutPage() {
         refetchInterval: 15_000,
     });
 
-    if (basket.items.length === 0) {
-        navigate("/basket");
-        return null;
-    }
+    useEffect(() => {
+        if (basket.items.length === 0 && !paymentComplete.current) navigate("/basket");
+    }, [basket.items.length, navigate]);
+
+    if (basket.items.length === 0) return null;
 
     const invalidItems = basket.items.filter((item) => {
         const live = liveDishes.find((d) => d.id === item.dishId);
@@ -129,6 +131,7 @@ export default function CheckoutPage() {
                     quantity: i.quantity,
                 })),
             });
+            paymentComplete.current = true;
             clearBasket();
             navigate(`/order/${order.id}/track`, { state: { justPlaced: true } });
         } catch (e: any) {

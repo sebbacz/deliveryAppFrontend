@@ -2,22 +2,26 @@ import axios from "axios";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
-// Authenticated instance — carries the owner Bearer token
+
 export const api = axios.create({ baseURL: BASE_URL });
 
-// Public instance — never sends an Authorization header
+
 export const publicApi = axios.create({ baseURL: BASE_URL });
 
-// Store the token in a closure so only `api`'s interceptor reads it.
-// Mutating `api.defaults.headers.common` would affect `publicApi` too because
-// axios.create() instances share the same `headers.common` object by reference.
-let _token: string | undefined;
 
-api.interceptors.request.use((config) => {
+let _token: string | undefined;
+let _refreshToken: (() => Promise<void>) | undefined;
+
+api.interceptors.request.use(async (config) => {
+    if (_refreshToken) await _refreshToken();
     if (_token) config.headers.Authorization = `Bearer ${_token}`;
     return config;
 });
 
 export function setAuthToken(token?: string) {
     _token = token;
+}
+
+export function setTokenRefresher(fn: () => Promise<void>) {
+    _refreshToken = fn;
 }

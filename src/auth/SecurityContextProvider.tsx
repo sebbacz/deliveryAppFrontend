@@ -4,7 +4,7 @@ import SecurityContext from "./SecurityContext";
 import keycloak from "./keycloak";
 import { isExpired } from "react-jwt";
 import type { User } from "../model/user";
-import { setAuthToken } from "../services/api";
+import { setAuthToken, setTokenRefresher } from "../services/api";
 
 export default function SecurityContextProvider({ children }: PropsWithChildren) {
     const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
@@ -16,9 +16,7 @@ export default function SecurityContextProvider({ children }: PropsWithChildren)
         initCalled.current = true;
 
         keycloak.init({
-            onLoad: "check-sso",
             checkLoginIframe: false,
-            silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
         })
             .then(() => {
                 setIsInitialised(true);
@@ -26,6 +24,12 @@ export default function SecurityContextProvider({ children }: PropsWithChildren)
                     setAuthToken(keycloak.token);
                     updateUserFromToken();
                 }
+                setTokenRefresher(async () => {
+                    if (keycloak.authenticated) {
+                        await keycloak.updateToken(30);
+                        setAuthToken(keycloak.token);
+                    }
+                });
             })
             .catch(console.error);
     }, []);

@@ -10,6 +10,9 @@ import {
     Grid,
     Divider,
     CircularProgress,
+    Checkbox,
+    FormControlLabel,
+    Stack,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -33,10 +36,26 @@ type CreateRestaurantForm = {
 
 const CUISINE_OPTIONS = ["Belgian", "French", "Italian", "Japanese", "Mexican", "Indian", "Greek", "American", "Thai", "Other"];
 
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+type DaySchedule = { open: boolean; from: string; to: string };
+type WeeklySchedule = Record<string, DaySchedule>;
+
+const DEFAULT_SCHEDULE: WeeklySchedule = Object.fromEntries(
+    DAYS.map((d) => [d, { open: d !== "Sun", from: "09:00", to: "22:00" }])
+);
+
+function serializeSchedule(schedule: WeeklySchedule): string {
+    return DAYS.map((d) =>
+        schedule[d].open ? `${d} ${schedule[d].from}–${schedule[d].to}` : `${d} closed`
+    ).join(", ");
+}
+
 export default function CreateRestaurantPage() {
     const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE);
 
     const { data: existingRestaurant, isLoading: checkingRestaurant } = useQuery({
         queryKey: ["myRestaurant"],
@@ -50,7 +69,7 @@ export default function CreateRestaurantPage() {
         }
     }, [existingRestaurant, checkingRestaurant, navigate]);
 
-    const { control, handleSubmit } = useForm<CreateRestaurantForm>({
+    const { control, handleSubmit, setValue } = useForm<CreateRestaurantForm>({
         defaultValues: {
             name: "",
             street: "",
@@ -62,9 +81,17 @@ export default function CreateRestaurantPage() {
             pictureUrl: "",
             defaultPreparationTime: 15,
             typeOfCuisine: "",
-            openingHours: "",
+            openingHours: serializeSchedule(DEFAULT_SCHEDULE),
         },
     });
+
+    const updateDay = (day: string, patch: Partial<DaySchedule>) => {
+        setSchedule((prev) => {
+            const updated = { ...prev, [day]: { ...prev[day], ...patch } };
+            setValue("openingHours", serializeSchedule(updated));
+            return updated;
+        });
+    };
 
     const onSubmit = async (data: CreateRestaurantForm) => {
         setSubmitting(true);
@@ -144,11 +171,58 @@ export default function CreateRestaurantPage() {
                                 <TextField {...field} label="Picture URL" fullWidth margin="normal" placeholder="https://..." />
                             )}
                         />
-                        <Controller name="openingHours" control={control}
-                            render={({ field }) => (
-                                <TextField {...field} label="Opening hours" fullWidth margin="normal" placeholder="Mon–Fri 11:00–22:00" />
-                            )}
-                        />
+
+                        <Divider sx={{ my: 3 }} />
+
+                        {/* Opening hours */}
+                        <Typography variant="subtitle1" sx={{ mb: 0.5 }}>Opening hours</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Set the weekly schedule for your restaurant.
+                        </Typography>
+                        <Paper variant="outlined" sx={{ p: 2 }}>
+                            <Stack spacing={1.5}>
+                                {DAYS.map((day) => (
+                                    <Stack key={day} direction="row" alignItems="center" spacing={2}>
+                                        <FormControlLabel
+                                            sx={{ minWidth: 72, m: 0 }}
+                                            control={
+                                                <Checkbox
+                                                    checked={schedule[day].open}
+                                                    onChange={(e) => updateDay(day, { open: e.target.checked })}
+                                                    size="small"
+                                                />
+                                            }
+                                            label={<Typography variant="body2" sx={{ fontWeight: 500 }}>{day}</Typography>}
+                                        />
+                                        {schedule[day].open ? (
+                                            <>
+                                                <TextField
+                                                    type="time"
+                                                    size="small"
+                                                    value={schedule[day].from}
+                                                    onChange={(e) => updateDay(day, { from: e.target.value })}
+                                                    inputProps={{ step: 300 }}
+                                                    sx={{ width: 130 }}
+                                                />
+                                                <Typography variant="body2" color="text.secondary">to</Typography>
+                                                <TextField
+                                                    type="time"
+                                                    size="small"
+                                                    value={schedule[day].to}
+                                                    onChange={(e) => updateDay(day, { to: e.target.value })}
+                                                    inputProps={{ step: 300 }}
+                                                    sx={{ width: 130 }}
+                                                />
+                                            </>
+                                        ) : (
+                                            <Typography variant="body2" color="text.disabled">Closed</Typography>
+                                        )}
+                                    </Stack>
+                                ))}
+                            </Stack>
+                        </Paper>
+                        {/* Hidden field keeps the serialized value in the form */}
+                        <Controller name="openingHours" control={control} render={() => <></>} />
 
                         <Divider sx={{ my: 3 }} />
 

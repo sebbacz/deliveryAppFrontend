@@ -1,5 +1,14 @@
 import { api, publicApi } from "./api";
 
+export interface PendingDraft {
+    name: string;
+    type: string;
+    foodTags: string[];
+    description: string;
+    price: number;
+    pictureUrl: string;
+}
+
 export interface DishResponse {
     id: string;
     restaurantId: string;
@@ -10,11 +19,12 @@ export interface DishResponse {
     price: number;
     pictureUrl: string;
     inStock: boolean;
-    state: "DRAFT" | "LIVE";
+    state: "DRAFT" | "LIVE" | "LIVE_WITH_PENDING";
+    scheduledAt?: string;
+    pendingDraft?: PendingDraft;
 }
 
 export interface DishDraftRequest {
-    id?: string;
     restaurantId: string;
     name: string;
     type: string;
@@ -24,8 +34,13 @@ export interface DishDraftRequest {
     pictureUrl: string;
 }
 
-export async function saveDishDraft(data: DishDraftRequest): Promise<DishResponse> {
+export async function createDishDraft(data: DishDraftRequest): Promise<DishResponse> {
     const { data: response } = await api.post("/api/dishes/draft", data);
+    return response;
+}
+
+export async function updateDishDraft(id: string, data: DishDraftRequest): Promise<DishResponse> {
+    const { data: response } = await api.put(`/api/dishes/${id}/draft`, data);
     return response;
 }
 

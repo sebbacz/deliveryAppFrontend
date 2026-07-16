@@ -5,8 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Button, Chip, Stack, Typography } from "@mui/material";
 import type { RestaurantResponse } from "../services/restaurantService";
 
-// Fix Leaflet's default marker icons with Vite
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -28,7 +27,6 @@ interface RestaurantMapProps {
 export default function RestaurantMap({ restaurants }: RestaurantMapProps) {
     const navigate = useNavigate();
 
-    // Default center: Brussels, Belgium
     const center: [number, number] = [50.85045, 4.34878];
 
     return (

@@ -13,9 +13,9 @@ import {
     Grid,
     Divider,
 } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { saveDishDraft } from "../services/dishService";
+import { createDishDraft, updateDishDraft, getOwnerDishes } from "../services/dishService";
 import { upsertDish } from "../services/dishStore";
 import PageLayout from "../components/PageLayout";
 
@@ -31,16 +31,37 @@ type FormData = {
 };
 
 export default function DishDraftEditorPage() {
-    const { restaurantId } = useParams<{ restaurantId: string }>();
+    const { restaurantId, dishId } = useParams<{ restaurantId: string; dishId?: string }>();
     const navigate = useNavigate();
+    const isEditMode = !!dishId;
+
     const [foodTags, setFoodTags] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(isEditMode);
 
     const { control, handleSubmit, reset } = useForm<FormData>({
         defaultValues: { name: "", type: "MAIN", description: "", price: 0, pictureUrl: "" },
     });
+
+    useEffect(() => {
+        if (!isEditMode || !restaurantId || !dishId) return;
+
+        getOwnerDishes(restaurantId).then((dishes) => {
+            const dish = dishes.find((d) => d.id === dishId);
+            if (!dish) return;
+            const draft = dish.pendingDraft ?? dish;
+            reset({
+                name: draft.name,
+                type: draft.type,
+                description: draft.description,
+                price: draft.price,
+                pictureUrl: draft.pictureUrl,
+            });
+            setFoodTags(draft.foodTags ?? []);
+        }).finally(() => setLoading(false));
+    }, [isEditMode, restaurantId, dishId, reset]);
 
     function toggleTag(tag: string) {
         setFoodTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
@@ -57,7 +78,7 @@ export default function DishDraftEditorPage() {
         setSubmitting(true);
         setError(null);
         try {
-            const created = await saveDishDraft({
+            const payload = {
                 restaurantId,
                 name: data.name,
                 type: data.type,
@@ -65,10 +86,13 @@ export default function DishDraftEditorPage() {
                 description: data.description,
                 price: Number(data.price),
                 pictureUrl: data.pictureUrl,
-            });
-            upsertDish(restaurantId, created);
-            reset();
-            setFoodTags([]);
+            };
+
+            const result = isEditMode && dishId
+                ? await updateDishDraft(dishId, payload)
+                : await createDishDraft(payload);
+
+            upsertDish(restaurantId, result);
             navigate(`/restaurant/${restaurantId}/dishes`);
         } catch {
             setError("Failed to save dish draft. Please try again.");
@@ -77,6 +101,16 @@ export default function DishDraftEditorPage() {
         }
     };
 
+    if (loading) {
+        return (
+            <PageLayout>
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
+                    <CircularProgress />
+                </Box>
+            </PageLayout>
+        );
+    }
+
     return (
         <PageLayout>
             <Container maxWidth="sm">
@@ -84,9 +118,11 @@ export default function DishDraftEditorPage() {
                     <Button variant="text" onClick={() => navigate(`/restaurant/${restaurantId}/dishes`)} sx={{ mb: 1, pl: 0 }}>
                         ← Back to dishes
                     </Button>
-                    <Typography variant="h5">New dish draft</Typography>
+                    <Typography variant="h5">{isEditMode ? "Edit dish draft" : "New dish draft"}</Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Drafts are invisible to customers until published.
+                        {isEditMode
+                            ? "Changes will be saved as a pending draft and won't affect the live version until published."
+                            : "Drafts are invisible to customers until published."}
                     </Typography>
                 </Box>
 
@@ -140,7 +176,6 @@ export default function DishDraftEditorPage() {
 
                         <Divider sx={{ my: 3 }} />
 
-                        {/* Food tags */}
                         <Typography variant="subtitle1" sx={{ mb: 1.5 }}>Food tags</Typography>
                         <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
                             {FOOD_TAG_OPTIONS.map((tag) => (
@@ -182,7 +217,7 @@ export default function DishDraftEditorPage() {
 
                         <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
                             <Button type="submit" variant="contained" size="large" fullWidth disabled={submitting}>
-                                {submitting ? <CircularProgress size={22} color="inherit" /> : "Save draft"}
+                                {submitting ? <CircularProgress size={22} color="inherit" /> : isEditMode ? "Save changes" : "Save draft"}
                             </Button>
                             <Button variant="outlined" size="large" fullWidth
                                 onClick={() => navigate(`/restaurant/${restaurantId}/dishes`)}>

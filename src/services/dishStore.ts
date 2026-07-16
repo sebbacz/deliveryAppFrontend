@@ -25,7 +25,7 @@ export function upsertDish(restaurantId: string, dish: DishResponse): void {
     save(restaurantId, dishes);
 }
 
-export function updateDishState(restaurantId: string, dishId: string, state: "DRAFT" | "LIVE"): void {
+export function updateDishState(restaurantId: string, dishId: string, state: "DRAFT" | "LIVE" | "LIVE_WITH_PENDING"): void {
     const dishes = getDishes(restaurantId);
     const dish = dishes.find((d) => d.id === dishId);
     if (dish) {

@@ -2,7 +2,7 @@ import { useEffect, useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import SecurityContext from "../auth/SecurityContext";
-import { getMyRestaurant, openRestaurant, closeRestaurant } from "../services/restaurantService";
+import { getMyRestaurant, openRestaurant, closeRestaurant, deleteMyRestaurant } from "../services/restaurantService";
 import {
     Box,
     Typography,
@@ -13,6 +13,11 @@ import {
     Paper,
     Chip,
     Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
 } from "@mui/material";
 import PageLayout from "../components/PageLayout";
 
@@ -21,6 +26,8 @@ export default function OwnerDashboard() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [togglingStatus, setTogglingStatus] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const { data: restaurant, isLoading, isError } = useQuery({
         queryKey: ["myRestaurant"],
@@ -36,6 +43,18 @@ export default function OwnerDashboard() {
     useEffect(() => {
         if (isError) { logout(); }
     }, [isError, logout]);
+
+    async function handleDelete() {
+        setDeleting(true);
+        try {
+            await deleteMyRestaurant();
+            queryClient.removeQueries({ queryKey: ["myRestaurant"] });
+            navigate("/create-restaurant");
+        } finally {
+            setDeleting(false);
+            setDeleteDialogOpen(false);
+        }
+    }
 
     async function handleToggleOpen() {
         if (!restaurant) return;
@@ -73,7 +92,6 @@ export default function OwnerDashboard() {
 
                 {restaurant && (
                     <>
-                        {/* Restaurant info */}
                         <Paper variant="outlined" sx={{ p: 3, mb: 4 }}>
                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 2 }}>
                                 <Box>
@@ -92,20 +110,45 @@ export default function OwnerDashboard() {
                                         Prep time: {restaurant.defaultPreparationTime} min · {restaurant.openingHours}
                                     </Typography>
                                 </Box>
-                                <Button
-                                    variant={restaurant.isOpen ? "outlined" : "contained"}
-                                    color={restaurant.isOpen ? "error" : "success"}
-                                    onClick={handleToggleOpen}
-                                    disabled={togglingStatus}
-                                >
-                                    {restaurant.isOpen ? "Close restaurant" : "Open restaurant"}
-                                </Button>
+                                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                                    <Button
+                                        variant={restaurant.isOpen ? "outlined" : "contained"}
+                                        color={restaurant.isOpen ? "error" : "success"}
+                                        onClick={handleToggleOpen}
+                                        disabled={togglingStatus}
+                                    >
+                                        {restaurant.isOpen ? "Close restaurant" : "Open restaurant"}
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        onClick={() => setDeleteDialogOpen(true)}
+                                    >
+                                        Delete restaurant
+                                    </Button>
+                                </Box>
                             </Box>
                         </Paper>
 
+                        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+                            <DialogTitle>Delete restaurant?</DialogTitle>
+                            <DialogContent>
+                                <DialogContentText>
+                                    This will permanently delete <strong>{restaurant.name}</strong> and cannot be undone.
+                                </DialogContentText>
+                            </DialogContent>
+                            <DialogActions>
+                                <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+                                    Cancel
+                                </Button>
+                                <Button onClick={handleDelete} color="error" variant="contained" disabled={deleting}>
+                                    {deleting ? <CircularProgress size={20} color="inherit" /> : "Delete"}
+                                </Button>
+                            </DialogActions>
+                        </Dialog>
+
                         <Divider sx={{ mb: 4 }} />
 
-                        {/* Quick actions */}
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 12, sm: 4 }}>
                                 <Paper variant="outlined" sx={{ p: 3 }}>

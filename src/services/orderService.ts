@@ -59,6 +59,14 @@ export async function markOrderReady(orderId: string): Promise<void> {
     await api.post(`/api/orders/${orderId}/ready`);
 }
 
+export async function markOrderPickedUp(orderId: string): Promise<void> {
+    await api.post(`/api/orders/${orderId}/pickup`);
+}
+
+export async function markOrderDelivered(orderId: string): Promise<void> {
+    await api.post(`/api/orders/${orderId}/delivered`);
+}
+
 export async function createOrder(request: CreateOrderRequest): Promise<OrderResponse> {
     const { data } = await publicApi.post("/unsecured/orders", request);
     return data;

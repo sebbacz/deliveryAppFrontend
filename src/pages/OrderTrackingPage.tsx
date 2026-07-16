@@ -18,6 +18,17 @@ import {
     Stepper,
     Typography,
 } from "@mui/material";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import LinkIcon from "@mui/icons-material/Link";
@@ -122,7 +133,6 @@ export default function OrderTrackingPage() {
                             borderColor: "success.light",
                         }}
                     >
-                        {/* Green header strip */}
                         <Box sx={{ bgcolor: "success.main", px: 3, py: 2.5, display: "flex", alignItems: "center", gap: 2 }}>
                             <CheckCircleOutlineIcon sx={{ color: "white", fontSize: 32 }} />
                             <Box>
@@ -135,7 +145,6 @@ export default function OrderTrackingPage() {
                             </Box>
                         </Box>
 
-                        {/* Tracking link */}
                         <Box sx={{ px: 3, py: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
                             <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
                                 Your tracking link:
@@ -196,9 +205,21 @@ export default function OrderTrackingPage() {
                     </Typography>
                     <Typography variant="body2" color="text.secondary">{order.contactEmail}</Typography>
                     {order.courierLatitude != null && order.courierLongitude != null && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Courier: <code>{order.courierLatitude.toFixed(5)}, {order.courierLongitude.toFixed(5)}</code>
-                        </Typography>
+                        <Box sx={{ mt: 1.5, borderRadius: 1, overflow: "hidden", height: 220 }}>
+                            <MapContainer
+                                center={[order.courierLatitude, order.courierLongitude]}
+                                zoom={14}
+                                style={{ height: "100%", width: "100%" }}
+                            >
+                                <TileLayer
+                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                />
+                                <Marker position={[order.courierLatitude, order.courierLongitude]}>
+                                    <Popup>Courier location</Popup>
+                                </Marker>
+                            </MapContainer>
+                        </Box>
                     )}
                 </Paper>
 

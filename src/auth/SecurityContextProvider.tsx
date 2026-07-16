@@ -16,6 +16,8 @@ export default function SecurityContextProvider({ children }: PropsWithChildren)
         initCalled.current = true;
 
         keycloak.init({
+            onLoad: "check-sso",
+            silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
             checkLoginIframe: false,
         })
             .then(() => {
@@ -56,7 +58,6 @@ export default function SecurityContextProvider({ children }: PropsWithChildren)
     }
 
     function logout() {
-        // trigger Keycloak logout and clear local auth state
         keycloak.logout();
         setAuthToken(undefined);
         setLoggedInUser(null);

@@ -20,9 +20,13 @@ import {
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
+import DirectionsBikeIcon from "@mui/icons-material/DirectionsBike";
+import HomeIcon from "@mui/icons-material/Home";
 import {
     acceptOrder,
     getOrdersForRestaurant,
+    markOrderDelivered,
+    markOrderPickedUp,
     markOrderReady,
     rejectOrder,
     type OrderResponse,
@@ -53,6 +57,16 @@ export default function OrdersPage() {
         queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
     }
 
+    async function handleMarkPickedUp(order: OrderResponse) {
+        await markOrderPickedUp(order.id);
+        queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
+    }
+
+    async function handleMarkDelivered(order: OrderResponse) {
+        await markOrderDelivered(order.id);
+        queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
+    }
+
     async function handleRejectConfirm() {
         if (!rejectDialogOrder || !rejectionReason.trim()) return;
         await rejectOrder(rejectDialogOrder.id, rejectionReason);
@@ -61,9 +75,11 @@ export default function OrdersPage() {
         queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
     }
 
-    const pending = orders.filter((o) => o.status === "PENDING_DECISION");
-    const accepted = orders.filter((o) => o.status === "ACCEPTED");
-    const decided = orders.filter((o) => o.status === "REJECTED" || o.status === "READY_FOR_PICKUP");
+    const pending       = orders.filter((o) => o.status === "PENDING_DECISION");
+    const accepted      = orders.filter((o) => o.status === "ACCEPTED");
+    const readyPickup   = orders.filter((o) => o.status === "READY_FOR_PICKUP");
+    const pickedUp      = orders.filter((o) => o.status === "PICKED_UP");
+    const decided       = orders.filter((o) => o.status === "REJECTED" || o.status === "DELIVERED");
 
     if (isLoading) {
         return (
@@ -109,6 +125,28 @@ export default function OrdersPage() {
                         <Stack spacing={2} sx={{ mb: 3 }}>
                             {accepted.map((order) => (
                                 <OrderCard key={order.id} order={order} onMarkReady={handleMarkReady} />
+                            ))}
+                        </Stack>
+                    </>
+                )}
+
+                {readyPickup.length > 0 && (
+                    <>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>Ready for Pickup ({readyPickup.length})</Typography>
+                        <Stack spacing={2} sx={{ mb: 3 }}>
+                            {readyPickup.map((order) => (
+                                <OrderCard key={order.id} order={order} onMarkPickedUp={handleMarkPickedUp} />
+                            ))}
+                        </Stack>
+                    </>
+                )}
+
+                {pickedUp.length > 0 && (
+                    <>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>Out for Delivery ({pickedUp.length})</Typography>
+                        <Stack spacing={2} sx={{ mb: 3 }}>
+                            {pickedUp.map((order) => (
+                                <OrderCard key={order.id} order={order} onMarkDelivered={handleMarkDelivered} />
                             ))}
                         </Stack>
                     </>
@@ -184,6 +222,8 @@ function statusColor(status: string): "warning" | "success" | "error" | "info" |
     if (status === "ACCEPTED") return "success";
     if (status === "REJECTED") return "error";
     if (status === "READY_FOR_PICKUP") return "info";
+    if (status === "PICKED_UP") return "info";
+    if (status === "DELIVERED") return "success";
     return "default";
 }
 
@@ -192,14 +232,20 @@ function OrderCard({
     onAccept,
     onReject,
     onMarkReady,
+    onMarkPickedUp,
+    onMarkDelivered,
 }: {
     order: OrderResponse;
     onAccept?: (o: OrderResponse) => void;
     onReject?: (o: OrderResponse) => void;
     onMarkReady?: (o: OrderResponse) => void;
+    onMarkPickedUp?: (o: OrderResponse) => void;
+    onMarkDelivered?: (o: OrderResponse) => void;
 }) {
-    const isPending = order.status === "PENDING_DECISION";
+    const isPending  = order.status === "PENDING_DECISION";
     const isAccepted = order.status === "ACCEPTED";
+    const isReady    = order.status === "READY_FOR_PICKUP";
+    const isPickedUp = order.status === "PICKED_UP";
     const total = order.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const countdown = useOrderCountdown(order.createdAt);
 
@@ -271,6 +317,28 @@ function OrderCard({
                             onClick={() => onMarkReady(order)}
                         >
                             Mark ready
+                        </Button>
+                    )}
+                    {isReady && onMarkPickedUp && (
+                        <Button
+                            size="small"
+                            variant="contained"
+                            color="secondary"
+                            startIcon={<DirectionsBikeIcon />}
+                            onClick={() => onMarkPickedUp(order)}
+                        >
+                            Picked up
+                        </Button>
+                    )}
+                    {isPickedUp && onMarkDelivered && (
+                        <Button
+                            size="small"
+                            variant="contained"
+                            color="success"
+                            startIcon={<HomeIcon />}
+                            onClick={() => onMarkDelivered(order)}
+                        >
+                            Delivered
                         </Button>
                     )}
                 </Stack>

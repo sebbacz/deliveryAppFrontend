@@ -19,6 +19,7 @@ import {
     Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
 import {
     applyPendingDishChanges,
     getOwnerDishes,
@@ -78,8 +79,8 @@ export default function DishManagePage() {
         invalidate();
     }
 
-    const liveCount = dishes.filter((d) => d.state === "LIVE").length;
-    const draftCount = dishes.filter((d) => d.state === "DRAFT").length;
+    const liveCount = dishes.filter((d) => d.state === "LIVE" || d.state === "LIVE_WITH_PENDING").length;
+    const pendingCount = dishes.filter((d) => d.state === "DRAFT" || d.state === "LIVE_WITH_PENDING").length;
 
     if (isLoading) {
         return (
@@ -102,14 +103,14 @@ export default function DishManagePage() {
                     <Box>
                         <Typography variant="h5">Dishes</Typography>
                         <Typography variant="body2" color="text.secondary">
-                            {liveCount} live · {draftCount} draft{draftCount !== 1 ? "s" : ""} pending
+                            {liveCount} live · {pendingCount} pending change{pendingCount !== 1 ? "s" : ""}
                         </Typography>
                     </Box>
                     <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-                        {draftCount > 0 && (
+                        {pendingCount > 0 && (
                             <>
                                 <Button variant="outlined" size="small" onClick={handleApplyChanges}>
-                                    Publish all drafts
+                                    Publish all pending
                                 </Button>
                                 <Button variant="outlined" size="small" onClick={() => setScheduleDialogOpen(true)}>
                                     Schedule
@@ -145,6 +146,7 @@ export default function DishManagePage() {
                             <DishCard
                                 key={dish.id}
                                 dish={dish}
+                                restaurantId={restaurantId!}
                                 onPublish={handlePublish}
                                 onUnpublish={handleUnpublish}
                                 onToggleStock={handleStock}
@@ -158,7 +160,7 @@ export default function DishManagePage() {
                 <DialogTitle>Schedule pending changes</DialogTitle>
                 <DialogContent>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        All {draftCount} draft{draftCount > 1 ? "s" : ""} will go live at the chosen time.
+                        All {pendingCount} pending change{pendingCount > 1 ? "s" : ""} will go live at the chosen time.
                     </Typography>
                     <TextField
                         label="Go live at"
@@ -183,16 +185,23 @@ export default function DishManagePage() {
 
 function DishCard({
     dish,
+    restaurantId,
     onPublish,
     onUnpublish,
     onToggleStock,
 }: {
     dish: DishResponse;
+    restaurantId: string;
     onPublish: (d: DishResponse) => Promise<void>;
     onUnpublish: (d: DishResponse) => Promise<void>;
     onToggleStock: (d: DishResponse) => Promise<void>;
 }) {
-    const isLive = dish.state === "LIVE";
+    const navigate = useNavigate();
+    const isLive = dish.state === "LIVE" || dish.state === "LIVE_WITH_PENDING";
+    const hasPendingDraft = dish.state === "DRAFT" || dish.state === "LIVE_WITH_PENDING";
+
+    const stateColor = dish.state === "LIVE" ? "success" : dish.state === "LIVE_WITH_PENDING" ? "warning" : "default";
+    const stateLabel = dish.state === "LIVE_WITH_PENDING" ? "LIVE + PENDING EDIT" : dish.state;
 
     return (
         <Paper variant="outlined">
@@ -216,13 +225,13 @@ function DishCard({
                 <Grid size="grow">
                     <Box sx={{ p: 2 }}>
                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1, flexWrap: "wrap" }}>
-                            <Box>
-                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }} flexWrap="wrap">
                                     <Typography variant="subtitle1">{dish.name}</Typography>
                                     <Chip
-                                        label={dish.state}
+                                        label={stateLabel}
                                         size="small"
-                                        color={isLive ? "success" : "warning"}
+                                        color={stateColor}
                                         variant="outlined"
                                     />
                                     {isLive && (
@@ -249,9 +258,35 @@ function DishCard({
                                         ))}
                                     </Stack>
                                 )}
+
+                                {dish.state === "LIVE_WITH_PENDING" && dish.pendingDraft && (
+                                    <Box sx={{ mt: 1.5, p: 1.5, bgcolor: "action.hover", borderRadius: 1 }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                                            Pending edit:
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            {dish.pendingDraft.name} · €{dish.pendingDraft.price.toFixed(2)}
+                                        </Typography>
+                                        {dish.scheduledAt && (
+                                            <Typography variant="caption" color="text.secondary">
+                                                Scheduled: {new Date(dish.scheduledAt).toLocaleString()}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                )}
                             </Box>
 
                             <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+                                {hasPendingDraft && (
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={<EditIcon />}
+                                        onClick={() => navigate(`/restaurant/${restaurantId}/dishes/${dish.id}/edit`)}
+                                    >
+                                        Edit draft
+                                    </Button>
+                                )}
                                 {isLive ? (
                                     <>
                                         <Button size="small" variant="outlined" onClick={() => onToggleStock(dish)}>

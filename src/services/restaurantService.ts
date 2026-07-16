@@ -38,13 +38,13 @@ export async function createRestaurant(data: CreateRestaurantRequest): Promise<R
 }
 
 export async function getMyRestaurant(): Promise<RestaurantResponse | null> {
-    try {
-        const { data } = await api.get("/api/restaurants/my");
-        return data;
-    } catch (error: any) {
-        if (error.response?.status === 404) return null;
-        throw error;
-    }
+    const { status, data } = await api.get("/api/restaurants/my", { validateStatus: (s) => s < 500 });
+    if (status === 204) return null;
+    return data;
+}
+
+export async function deleteMyRestaurant(): Promise<void> {
+    await api.delete("/api/restaurants/my");
 }
 
 export async function openRestaurant(): Promise<void> {

@@ -9,7 +9,7 @@ export type RestaurantResponse = {
     city: string;
     country: string;
     contactEmail: string;
-    pictureUrl: string;
+    pictureUrls: string[];
     defaultPreparationTime: number;
     typeOfCuisine: string;
     openingHours: string;
@@ -26,7 +26,7 @@ export type CreateRestaurantRequest = {
     city: string;
     country: string;
     contactEmail: string;
-    pictureUrl: string;
+    pictureUrls: string[];
     defaultPreparationTime: number;
     typeOfCuisine: string;
     openingHours: string;

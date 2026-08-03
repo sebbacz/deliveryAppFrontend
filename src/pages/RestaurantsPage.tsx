@@ -27,6 +27,7 @@ import MapIcon from "@mui/icons-material/Map";
 import { getAllRestaurants, type RestaurantResponse } from "../services/restaurantService";
 import { getPublishedDishes } from "../services/dishService";
 import { getRestaurantBusyness } from "../services/orderService";
+import { getActiveCriteria, type CriteriaEventResponse } from "../services/priceRangeService";
 import { useGeolocation } from "../hooks/useGeolocation";
 import PageLayout from "../components/PageLayout";
 
@@ -35,10 +36,12 @@ const RestaurantMap = lazy(() => import("../components/RestaurantMap"));
 const PRICE_RANGES = ["€", "€€", "€€€", "€€€€"] as const;
 type PriceRange = (typeof PRICE_RANGES)[number];
 
-function getPriceRange(avg: number): PriceRange {
-    if (avg < 10) return "€";
-    if (avg <= 30) return "€€";
-    if (avg <= 60) return "€€€";
+const DEFAULT_CRITERIA = { cheapMax: 10, regularMax: 30, expensiveMax: 60 };
+
+function getPriceRange(avg: number, criteria: { cheapMax: number; regularMax: number; expensiveMax: number }): PriceRange {
+    if (avg <= criteria.cheapMax) return "€";
+    if (avg <= criteria.regularMax) return "€€";
+    if (avg <= criteria.expensiveMax) return "€€€";
     return "€€€€";
 }
 
@@ -69,6 +72,14 @@ export default function RestaurantsPage() {
         refetchInterval: 30_000,
     });
 
+    const { data: activeCriteria } = useQuery<CriteriaEventResponse | null>({
+        queryKey: ["activeCriteria"],
+        queryFn: getActiveCriteria,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const criteria = activeCriteria ?? DEFAULT_CRITERIA;
+
     const dishQueries = useQueries({
         queries: restaurants.map((r) => ({
             queryKey: ["publicDishes", r.id],
@@ -91,9 +102,9 @@ export default function RestaurantsPage() {
     const restaurantData = restaurants.map((r, i) => {
         const dishes = dishQueries[i]?.data ?? [];
         const avgPrice = dishes.length > 0 ? dishes.reduce((sum, d) => sum + d.price, 0) / dishes.length : 0;
-        const priceRange: PriceRange | null = dishes.length > 0 ? getPriceRange(avgPrice) : null;
+        const priceRange: PriceRange | null = dishes.length > 0 ? getPriceRange(avgPrice, criteria) : null;
         const pendingOrders = busynessQueries[i]?.data?.pendingOrderCount ?? 0;
-        const busynessFactor = Math.max(1, 1 + pendingOrders * 0.2);
+        const busynessFactor = Math.max(1, pendingOrders);
 
         let distanceKm: number | null = null;
         let estimatedMinutes: number;
@@ -266,10 +277,10 @@ function RestaurantCard({
             onClick={onClick}
             sx={{ cursor: "pointer", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column", "&:hover": { boxShadow: 2 } }}
         >
-            {restaurant.pictureUrl ? (
+            {restaurant.pictureUrls?.[0] ? (
                 <Box
                     component="img"
-                    src={restaurant.pictureUrl}
+                    src={restaurant.pictureUrls[0]}
                     alt={restaurant.name}
                     sx={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
                 />

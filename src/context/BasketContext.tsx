@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
 export interface BasketItem {
     dishId: string;
@@ -24,24 +24,31 @@ interface BasketContextType {
     totalPrice: number;
 }
 
+const STORAGE_KEY = "kdg_basket";
+
+function loadBasket(): BasketState {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+    } catch {
+        // ignore corrupt data
+    }
+    return { restaurantId: null, restaurantName: "", items: [] };
+}
+
 const BasketContext = createContext<BasketContextType>({} as BasketContextType);
 
 export function BasketProvider({ children }: { children: ReactNode }) {
-    const [basket, setBasket] = useState<BasketState>({
-        restaurantId: null,
-        restaurantName: "",
-        items: [],
-    });
+    const [basket, setBasket] = useState<BasketState>(loadBasket);
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(basket));
+    }, [basket]);
 
     const addToBasket = (restaurantId: string, restaurantName: string, item: Omit<BasketItem, "quantity">) => {
         setBasket((prev) => {
-            // If different restaurant, clear basket first
             if (prev.restaurantId && prev.restaurantId !== restaurantId) {
-                return {
-                    restaurantId,
-                    restaurantName,
-                    items: [{ ...item, quantity: 1 }],
-                };
+                return { restaurantId, restaurantName, items: [{ ...item, quantity: 1 }] };
             }
             const existing = prev.items.find((i) => i.dishId === item.dishId);
             if (existing) {
@@ -52,11 +59,7 @@ export function BasketProvider({ children }: { children: ReactNode }) {
                     ),
                 };
             }
-            return {
-                restaurantId,
-                restaurantName,
-                items: [...prev.items, { ...item, quantity: 1 }],
-            };
+            return { restaurantId, restaurantName, items: [...prev.items, { ...item, quantity: 1 }] };
         });
     };
 

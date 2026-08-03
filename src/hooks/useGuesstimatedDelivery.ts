@@ -60,7 +60,7 @@ export function useGuesstimatedDelivery(restaurant: RestaurantResponse | undefin
     if (!restaurant) return null;
 
     const pendingOrderCount = busyness?.pendingOrderCount ?? 0;
-    const busynessFactor = Math.max(1, 1 + pendingOrderCount * 0.2);
+    const busynessFactor = Math.max(1, pendingOrderCount);
     const prepTime = restaurant.defaultPreparationTime;
 
     let deliveryMinutes: number | null = null;

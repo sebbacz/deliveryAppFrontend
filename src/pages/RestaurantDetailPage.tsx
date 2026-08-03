@@ -133,13 +133,28 @@ export default function RestaurantDetailPage() {
                     All restaurants
                 </Button>
 
-                {restaurant.pictureUrl && (
-                    <Box
-                        component="img"
-                        src={restaurant.pictureUrl}
-                        alt={restaurant.name}
-                        sx={{ width: "100%", maxHeight: 280, objectFit: "cover", borderRadius: 1, mb: 3, display: "block" }}
-                    />
+                {restaurant.pictureUrls?.length > 0 && (
+                    <Stack spacing={1} sx={{ mb: 3 }}>
+                        <Box
+                            component="img"
+                            src={restaurant.pictureUrls[0]}
+                            alt={restaurant.name}
+                            sx={{ width: "100%", maxHeight: 280, objectFit: "cover", borderRadius: 1, display: "block" }}
+                        />
+                        {restaurant.pictureUrls.length > 1 && (
+                            <Stack direction="row" spacing={1} sx={{ overflowX: "auto" }}>
+                                {restaurant.pictureUrls.slice(1).map((url, i) => (
+                                    <Box
+                                        key={i}
+                                        component="img"
+                                        src={url}
+                                        alt={`${restaurant.name} ${i + 2}`}
+                                        sx={{ height: 80, width: 120, objectFit: "cover", borderRadius: 1, flexShrink: 0 }}
+                                    />
+                                ))}
+                            </Stack>
+                        )}
+                    </Stack>
                 )}
 
                 {/* Restaurant info */}

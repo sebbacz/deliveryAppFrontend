@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, publicApi } from "./api";
 
 export type CriteriaEventResponse = {
     id: string;
@@ -22,4 +22,9 @@ export async function getCriteriaEvents(): Promise<CriteriaEventResponse[]> {
 
 export async function addCriteriaEvent(request: AddCriteriaEventRequest): Promise<void> {
     await api.post("/api/price-range/criteria", request);
+}
+
+export async function getActiveCriteria(): Promise<CriteriaEventResponse | null> {
+    const { data } = await publicApi.get("/unsecured/price-range/criteria/current");
+    return data ?? null;
 }

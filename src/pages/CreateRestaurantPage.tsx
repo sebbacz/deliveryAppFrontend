@@ -3,6 +3,7 @@ import {
     TextField,
     Button,
     Box,
+    IconButton,
     Typography,
     MenuItem,
     Paper,
@@ -14,7 +15,9 @@ import {
     FormControlLabel,
     Stack,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { createRestaurant, getMyRestaurant } from "../services/restaurantService";
@@ -28,7 +31,6 @@ type CreateRestaurantForm = {
     city: string;
     country: string;
     contactEmail: string;
-    pictureUrl: string;
     defaultPreparationTime: number;
     typeOfCuisine: string;
     openingHours: string;
@@ -56,6 +58,8 @@ export default function CreateRestaurantPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE);
+    const [pictureUrls, setPictureUrls] = useState<string[]>([""]);
+    const pictureUrlsRef = useRef(pictureUrls);
 
     const { data: existingRestaurant, isLoading: checkingRestaurant } = useQuery({
         queryKey: ["myRestaurant"],
@@ -78,7 +82,6 @@ export default function CreateRestaurantPage() {
             city: "",
             country: "Belgium",
             contactEmail: "",
-            pictureUrl: "",
             defaultPreparationTime: 15,
             typeOfCuisine: "",
             openingHours: serializeSchedule(DEFAULT_SCHEDULE),
@@ -97,7 +100,10 @@ export default function CreateRestaurantPage() {
         setSubmitting(true);
         setError(null);
         try {
-            await createRestaurant(data);
+            await createRestaurant({
+                ...data,
+                pictureUrls: pictureUrlsRef.current.filter((u) => u.trim() !== ""),
+            });
             navigate("/owner");
         } catch (err: any) {
             if (err.response?.status === 409) {
@@ -166,11 +172,53 @@ export default function CreateRestaurantPage() {
                                 <TextField {...field} label="Contact email" type="email" fullWidth required margin="normal" />
                             )}
                         />
-                        <Controller name="pictureUrl" control={control}
-                            render={({ field }) => (
-                                <TextField {...field} label="Picture URL" fullWidth margin="normal" placeholder="https://..." />
-                            )}
-                        />
+                        <Box sx={{ mt: 1 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                Picture URL(s)
+                            </Typography>
+                            <Stack spacing={1}>
+                                {pictureUrls.map((url, i) => (
+                                    <Stack key={i} direction="row" spacing={1} alignItems="center">
+                                        <TextField
+                                            value={url}
+                                            onChange={(e) => {
+                                                const updated = [...pictureUrls];
+                                                updated[i] = e.target.value;
+                                                setPictureUrls(updated);
+                                                pictureUrlsRef.current = updated;
+                                            }}
+                                            label={`Picture URL${pictureUrls.length > 1 ? ` ${i + 1}` : ""}`}
+                                            fullWidth
+                                            placeholder="https://..."
+                                        />
+                                        {pictureUrls.length > 1 && (
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => {
+                                                    const updated = pictureUrls.filter((_, j) => j !== i);
+                                                    setPictureUrls(updated);
+                                                    pictureUrlsRef.current = updated;
+                                                }}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        )}
+                                    </Stack>
+                                ))}
+                                <Button
+                                    size="small"
+                                    startIcon={<AddIcon />}
+                                    onClick={() => {
+                                        const updated = [...pictureUrls, ""];
+                                        setPictureUrls(updated);
+                                        pictureUrlsRef.current = updated;
+                                    }}
+                                    sx={{ alignSelf: "flex-start" }}
+                                >
+                                    Add another picture
+                                </Button>
+                            </Stack>
+                        </Box>
 
                         <Divider sx={{ my: 3 }} />
 

@@ -1,10 +1,11 @@
+//  localStorage cache for a single dish after draft save; prevents a full refetch on the edit page.
 import type { DishResponse } from "./dishService";
 
 function key(restaurantId: string) {
     return `dishes_${restaurantId}`;
 }
 
-export function getDishes(restaurantId: string): DishResponse[] {
+function getDishes(restaurantId: string): DishResponse[] {
     try {
         const raw = localStorage.getItem(key(restaurantId));
         return raw ? JSON.parse(raw) : [];
@@ -23,22 +24,4 @@ export function upsertDish(restaurantId: string, dish: DishResponse): void {
     if (idx >= 0) dishes[idx] = dish;
     else dishes.push(dish);
     save(restaurantId, dishes);
-}
-
-export function updateDishState(restaurantId: string, dishId: string, state: "DRAFT" | "LIVE" | "LIVE_WITH_PENDING"): void {
-    const dishes = getDishes(restaurantId);
-    const dish = dishes.find((d) => d.id === dishId);
-    if (dish) {
-        dish.state = state;
-        save(restaurantId, dishes);
-    }
-}
-
-export function updateDishStock(restaurantId: string, dishId: string, inStock: boolean): void {
-    const dishes = getDishes(restaurantId);
-    const dish = dishes.find((d) => d.id === dishId);
-    if (dish) {
-        dish.inStock = inStock;
-        save(restaurantId, dishes);
-    }
 }

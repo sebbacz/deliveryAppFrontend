@@ -1,3 +1,4 @@
+// Public restaurant detail page: shows menu, adds items to basket, and guards against mixing restaurants.
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";

@@ -11,6 +11,7 @@ import {
     ResponsiveContainer,
 } from "recharts";
 
+// Maps enum strings to integers plot them on a numeric Y-axis with custom tick labels.
 const PRICE_RANGE_ORDER = ["CHEAP", "REGULAR", "EXPENSIVE", "PREMIUM"];
 const PRICE_RANGE_LABELS: Record<string, string> = {
     CHEAP: "€",

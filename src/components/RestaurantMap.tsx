@@ -6,6 +6,7 @@ import { Button, Chip, Stack, Typography } from "@mui/material";
 import type { RestaurantResponse } from "../services/restaurantService";
 
 
+// Leaflet marker icon fix
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -27,6 +28,7 @@ interface RestaurantMapProps {
 export default function RestaurantMap({ restaurants }: RestaurantMapProps) {
     const navigate = useNavigate();
 
+    // Default center on Belgium; restaurants without geocoded coordinates are silently skipped.
     const center: [number, number] = [50.85045, 4.34878];
 
     return (

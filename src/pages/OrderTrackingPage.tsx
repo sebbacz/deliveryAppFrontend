@@ -22,7 +22,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -85,6 +85,7 @@ export default function OrderTrackingPage() {
     const justPlaced = (location.state as { justPlaced?: boolean } | null)?.justPlaced ?? false;
     const [copySnack, setCopySnack] = useState(false);
 
+    // Stop polling once the order reaches a terminal status to avoid unnecessary network calls.
     const { data: order, isLoading, isError } = useQuery({
         queryKey: ["order", orderId],
         queryFn: () => getOrderById(orderId!),

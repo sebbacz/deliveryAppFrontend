@@ -1,3 +1,4 @@
+// Route registry: public routes are open to all; owner routes are wrapped in ProtectedRoute to require Keycloak auth.
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import CreateRestaurantPage from "./pages/CreateRestaurantPage";

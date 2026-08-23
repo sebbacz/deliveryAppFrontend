@@ -1,3 +1,4 @@
+// getActiveCriteria is public so the restaurant listing page can compute price ranges without login.
 import { api, publicApi } from "./api";
 
 export type CriteriaEventResponse = {

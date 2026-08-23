@@ -1,3 +1,4 @@
+// Owner dish management: liveCount tracks proximity to the 10-live-dish cap enforced by the publish use cases.
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

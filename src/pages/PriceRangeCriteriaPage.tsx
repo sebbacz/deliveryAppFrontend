@@ -1,3 +1,4 @@
+// Allows owners to add new price-range threshold events and view the classification history chart.
 import { useForm, Controller } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {

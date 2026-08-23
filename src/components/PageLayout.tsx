@@ -1,3 +1,4 @@
+// Wraps every page with the fixed Navbar and a spacer Toolbar
 import type { PropsWithChildren } from "react";
 import { Box, Toolbar } from "@mui/material";
 import Navbar from "./Navbar";

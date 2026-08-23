@@ -1,3 +1,4 @@
+// basket items against live dish stock before checkout to catch price/availability changes since items were added.
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useBasket } from "../context/BasketContext";

@@ -7,6 +7,17 @@ interface GeoPosition {
     longitude: number;
 }
 
+
+/**
+ * Calculates the great-circle distance between two points on the Earth's surface
+ * using the Haversine formula.
+ *
+ * @param {number} lat1 - Latitude of the first point in decimal degrees.
+ * @param {number} lon1 - Longitude of the first point in decimal degrees.
+ * @param {number} lat2 - Latitude of the second point in decimal degrees.
+ * @param {number} lon2 - Longitude of the second point in decimal degrees.
+ * @returns {number} - The distance between the two points in kilometers.
+ */
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -31,19 +42,20 @@ async function geocodeAddress(address: string): Promise<GeoPosition | null> {
     }
 }
 
+// Estimates delivery time using haversine distance, 30 km/h travel speed, prep time, and a busyness multiplier.
 export function useGuesstimatedDelivery(restaurant: RestaurantResponse | undefined, customerPos: GeoPosition | null) {
     const restaurantAddress = restaurant
         ? `${restaurant.street} ${restaurant.number}, ${restaurant.postalCode} ${restaurant.city}, ${restaurant.country}`
         : "";
 
-    // Use backend-stored coordinates when available; fall back to Nominatim geocoding
+    // Use backend stored coordinates when available
     const hasStoredCoords = !!(restaurant?.latitude && restaurant?.longitude);
 
     const { data: geocodedCoords } = useQuery({
         queryKey: ["geocode", restaurantAddress],
         queryFn: () => geocodeAddress(restaurantAddress),
         enabled: !!restaurant && !!customerPos && !hasStoredCoords,
-        staleTime: 60 * 60 * 1000, // 1 hour
+        staleTime: 60 * 60 * 1000, // addresses don't change often; avoid hammering Nominatim
     });
 
     const restaurantCoords = hasStoredCoords && restaurant
@@ -54,13 +66,13 @@ export function useGuesstimatedDelivery(restaurant: RestaurantResponse | undefin
         queryKey: ["busyness", restaurant?.id],
         queryFn: () => getRestaurantBusyness(restaurant!.id),
         enabled: !!restaurant,
-        refetchInterval: 30_000,
+        refetchInterval: 30_000, // poll so the estimate stays responsive to order volume changes
     });
 
     if (!restaurant) return null;
 
     const pendingOrderCount = busyness?.pendingOrderCount ?? 0;
-    const busynessFactor = Math.max(1, pendingOrderCount);
+    const busynessFactor = Math.max(1, pendingOrderCount); // never below 1 so the estimate is never zero
     const prepTime = restaurant.defaultPreparationTime;
 
     let deliveryMinutes: number | null = null;
@@ -71,7 +83,7 @@ export function useGuesstimatedDelivery(restaurant: RestaurantResponse | undefin
             restaurantCoords.latitude,
             restaurantCoords.longitude
         );
-        deliveryMinutes = Math.ceil((distKm / 30) * 60); // 30 km/h average
+        deliveryMinutes = Math.ceil((distKm / 30) * 60); // 30 km/h — on flat courier speed
     }
 
     const totalMinutes = deliveryMinutes !== null

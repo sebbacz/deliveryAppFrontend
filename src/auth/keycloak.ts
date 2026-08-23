@@ -1,3 +1,4 @@
+//  Keycloak instance; configuration comes from
 import Keycloak from "keycloak-js";
 
 const keycloak = new Keycloak({

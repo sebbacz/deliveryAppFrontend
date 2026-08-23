@@ -1,3 +1,4 @@
+// Redirects to /owner immediately if Keycloak already has a valid session; otherwise presents sign-in / register options.
 import { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Button, Typography, Divider, CircularProgress, Paper, Container } from "@mui/material";

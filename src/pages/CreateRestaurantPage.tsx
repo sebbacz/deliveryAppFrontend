@@ -1,3 +1,4 @@
+// Form for registering a new restaurant; owners can only have one restaurant, enforced by the backend.
 import { useForm, Controller } from "react-hook-form";
 import {
     TextField,

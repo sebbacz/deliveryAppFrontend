@@ -31,6 +31,7 @@ import { getActiveCriteria, type CriteriaEventResponse } from "../services/price
 import { useGeolocation } from "../hooks/useGeolocation";
 import PageLayout from "../components/PageLayout";
 
+
 const RestaurantMap = lazy(() => import("../components/RestaurantMap"));
 
 const PRICE_RANGES = ["€", "€€", "€€€", "€€€€"] as const;
@@ -45,6 +46,7 @@ function getPriceRange(avg: number, criteria: { cheapMax: number; regularMax: nu
     return "€€€€";
 }
 
+//   great-circle distance in km between two GPS coordinates.
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;

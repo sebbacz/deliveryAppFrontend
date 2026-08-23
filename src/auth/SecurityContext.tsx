@@ -1,4 +1,4 @@
-
+// Shared auth context;  current user or login/logout actions.
 import  { createContext } from "react";
 import type { User } from "../model/user";
 

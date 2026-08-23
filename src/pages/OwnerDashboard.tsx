@@ -1,3 +1,4 @@
+// Owner dashboard: shows the owner's restaurant status, open/close controls, and navigation to dishes and orders.
 import { useEffect, useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

@@ -1,3 +1,4 @@
+//  browser's GPS position on demand rather, to avoid the permissionprompt on page load.
 import { useState } from "react";
 
 interface GeoPosition {

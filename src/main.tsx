@@ -1,3 +1,4 @@
+// App entry point: wraps the component tree with MUI theme, React Query client, and Keycloak SecurityContextProvider.
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

@@ -1,3 +1,4 @@
+// Stripe Elements payment and order creation;
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -48,7 +49,7 @@ interface DeliveryFormData {
 
 const STEPS = ["Delivery details", "Payment"];
 
-// Inner component using Stripe hooks (must be inside <Elements>)
+// Inner component using Stripe hooks
 interface StripePaymentStepProps {
     totalPrice: number;
     invalidItems: unknown[];

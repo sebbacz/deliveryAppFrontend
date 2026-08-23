@@ -1,3 +1,4 @@
+// Restaurant service: read operations use publicApi
 import { api, publicApi } from "./api";
 
 export type RestaurantResponse = {

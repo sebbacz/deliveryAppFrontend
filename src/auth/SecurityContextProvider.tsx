@@ -1,4 +1,4 @@
-
+//  Keycloak in check-sso mode and wires token refresh
 import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 import SecurityContext from "./SecurityContext";
 import keycloak from "./keycloak";

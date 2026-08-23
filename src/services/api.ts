@@ -1,3 +1,4 @@
+// Configures two axios instances: `api` (authenticated, refreshes token before each request) and `publicApi` (no auth).
 import axios from "axios";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL;

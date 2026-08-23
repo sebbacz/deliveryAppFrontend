@@ -24,6 +24,7 @@ interface BasketContextType {
     totalPrice: number;
 }
 
+// Basket persisted to localStorage so items survive a page refresh or tab close.
 const STORAGE_KEY = "kdg_basket";
 
 function loadBasket(): BasketState {
@@ -47,6 +48,7 @@ export function BasketProvider({ children }: { children: ReactNode }) {
 
     const addToBasket = (restaurantId: string, restaurantName: string, item: Omit<BasketItem, "quantity">) => {
         setBasket((prev) => {
+            // Adding from a different restaurant clears the previous basket automatically
             if (prev.restaurantId && prev.restaurantId !== restaurantId) {
                 return { restaurantId, restaurantName, items: [{ ...item, quantity: 1 }] };
             }

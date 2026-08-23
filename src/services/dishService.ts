@@ -1,3 +1,4 @@
+// Dish service: getPublishedDishes is public (customer menu)
 import { api, publicApi } from "./api";
 
 export interface PendingDraft {

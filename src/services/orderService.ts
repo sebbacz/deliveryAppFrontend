@@ -1,3 +1,4 @@
+// Order service: createOrder uses publicApi (no auth); management actions (accept/reject/etc.) use authenticated api.
 import { api, publicApi } from "./api";
 
 export interface OrderItem {

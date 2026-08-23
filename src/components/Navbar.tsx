@@ -1,3 +1,4 @@
+//   nav links to context (owner vs. customer area) based on the current route path
 import { useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";

@@ -1,3 +1,4 @@
+//  owner/customer role split so users self-select
 import { useNavigate } from "react-router-dom";
 import { Box, Button, Container, Toolbar, Typography, Stack, Paper } from "@mui/material";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
@@ -50,7 +51,7 @@ export default function LandingPage() {
                             fontSize: "0.7rem",
                         }}
                     >
-                        Farm to doorstep
+                        your place to order
                     </Typography>
                     <Typography
                         variant="h3"
@@ -62,7 +63,7 @@ export default function LandingPage() {
                         variant="body1"
                         sx={{ opacity: 0.8, maxWidth: 480, mx: "auto", lineHeight: 1.7 }}
                     >
-                        A marketplace for restaurants and the people who love them — browse menus, order fresh, and track every dish.
+                        browse menus, order fresh, and track every dish.
                     </Typography>
                 </Container>
             </Box>

@@ -3,7 +3,7 @@
 **Sebastian Gondek**
 
 - Documentation: `/documentation`
-- Wireframes: `/wireframes`
+- Wireframes: `/documentation/wireframes`
 
 ---
 

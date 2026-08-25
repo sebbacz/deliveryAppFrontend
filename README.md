@@ -2,8 +2,8 @@
 
 **Sebastian Gondek**
 
-- Documentation: `/documentation`
-- Wireframes: `/documentation/wireframes`
+- Documentation: `/documentation`  <-----
+- Wireframes: `/documentation/wireframes` <-------
 
 ---
 

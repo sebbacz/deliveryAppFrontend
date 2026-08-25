@@ -1,46 +1,27 @@
-// Polls orders every 15 s;
-import { useState, useEffect } from "react";
+// Owner orders page: lists incoming orders grouped by status and provides accept/reject/ready/pickup/delivered actions.
+
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-    Box,
-    Button,
-    Chip,
-    CircularProgress,
-    Container,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    Paper,
-    Stack,
-    TextField,
-    Typography,
+    Box, Button, CircularProgress, Container, Dialog, DialogActions,
+    DialogContent, DialogTitle, Paper, Stack, TextField, Typography,
 } from "@mui/material";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
-import DoneAllIcon from "@mui/icons-material/DoneAll";
-import DirectionsBikeIcon from "@mui/icons-material/DirectionsBike";
-import HomeIcon from "@mui/icons-material/Home";
 import {
-    acceptOrder,
-    getOrdersForRestaurant,
-    markOrderDelivered,
-    markOrderPickedUp,
-    markOrderReady,
-    rejectOrder,
-    type OrderResponse,
+    acceptOrder, getOrdersForRestaurant, markOrderDelivered, markOrderPickedUp,
+    markOrderReady, rejectOrder, type OrderResponse,
 } from "../services/orderService";
-import PageLayout from "../components/PageLayout";
+import { PageLayout } from "../components/common";
+import { OrderCard } from "../components/order";
 
 export default function OrdersPage() {
     const { restaurantId } = useParams<{ restaurantId: string }>();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const [rejectDialogOrder, setRejectDialogOrder] = useState<OrderResponse | null>(null);
-    const [rejectionReason, setRejectionReason] = useState("");
+    const [rejectDialogOrder, setRejectDialogOrder] = useState<OrderResponse | null>(null); // the order being rejected
+    const [rejectionReason, setRejectionReason] = useState("");                              // reason typed by the owner
 
+    //  every 15 s so the owner sees new orders promptly without a manual refresh
     const { data: orders = [], isLoading } = useQuery({
         queryKey: ["orders", restaurantId],
         queryFn: () => getOrdersForRestaurant(restaurantId!),
@@ -48,26 +29,31 @@ export default function OrdersPage() {
         refetchInterval: 15_000,
     });
 
+    // Accept the order and immediately refresh the list
     async function handleAccept(order: OrderResponse) {
         await acceptOrder(order.id);
         queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
     }
 
+    // Mark the order as ready for pickup by the delivery service
     async function handleMarkReady(order: OrderResponse) {
         await markOrderReady(order.id);
         queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
     }
 
+    // Confirm that the courier has picked up the order
     async function handleMarkPickedUp(order: OrderResponse) {
         await markOrderPickedUp(order.id);
         queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
     }
 
+    // Mark the order as delivered — final status
     async function handleMarkDelivered(order: OrderResponse) {
         await markOrderDelivered(order.id);
         queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
     }
 
+    // Submit the rejection with the reason and close the dialog
     async function handleRejectConfirm() {
         if (!rejectDialogOrder || !rejectionReason.trim()) return;
         await rejectOrder(rejectDialogOrder.id, rejectionReason);
@@ -76,11 +62,12 @@ export default function OrdersPage() {
         queryClient.invalidateQueries({ queryKey: ["orders", restaurantId] });
     }
 
-    const pending       = orders.filter((o) => o.status === "PENDING_DECISION");
-    const accepted      = orders.filter((o) => o.status === "ACCEPTED");
-    const readyPickup   = orders.filter((o) => o.status === "READY_FOR_PICKUP");
-    const pickedUp      = orders.filter((o) => o.status === "PICKED_UP");
-    const decided       = orders.filter((o) => o.status === "REJECTED" || o.status === "DELIVERED");
+    // Group orders by status so they can be rendered in separate sections
+    const pending     = orders.filter((o) => o.status === "PENDING_DECISION"); // awaiting owner decision
+    const accepted    = orders.filter((o) => o.status === "ACCEPTED");         // in the kitchen
+    const readyPickup = orders.filter((o) => o.status === "READY_FOR_PICKUP"); // waiting for courier
+    const pickedUp    = orders.filter((o) => o.status === "PICKED_UP");        // out for delivery
+    const decided     = orders.filter((o) => o.status === "REJECTED" || o.status === "DELIVERED"); // completed
 
     if (isLoading) {
         return (
@@ -95,11 +82,10 @@ export default function OrdersPage() {
     return (
         <PageLayout>
             <Container maxWidth="md">
-                <Button onClick={() => navigate("/owner")} sx={{ mb: 2 }}>
-                    ← Dashboard
-                </Button>
+                <Button onClick={() => navigate("/owner")} sx={{ mb: 2 }}>← Dashboard</Button>
                 <Typography variant="h5" sx={{ mb: 3 }}>Orders</Typography>
 
+                {/* Pending section  declinet 5 minutes */}
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>
                     Pending Decision ({pending.length})
                 </Typography>
@@ -120,6 +106,7 @@ export default function OrdersPage() {
                     </Stack>
                 )}
 
+                {/* In-kitchen orders   */}
                 {accepted.length > 0 && (
                     <>
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>In Kitchen ({accepted.length})</Typography>
@@ -131,6 +118,7 @@ export default function OrdersPage() {
                     </>
                 )}
 
+                {/* Ready for pickup */}
                 {readyPickup.length > 0 && (
                     <>
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>Ready for Pickup ({readyPickup.length})</Typography>
@@ -142,6 +130,7 @@ export default function OrdersPage() {
                     </>
                 )}
 
+                {/*  Out for delivery  */}
                 {pickedUp.length > 0 && (
                     <>
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>Out for Delivery ({pickedUp.length})</Typography>
@@ -153,6 +142,7 @@ export default function OrdersPage() {
                     </>
                 )}
 
+                {/*  Completed   */}
                 {decided.length > 0 && (
                     <>
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>Completed / Rejected ({decided.length})</Typography>
@@ -162,6 +152,7 @@ export default function OrdersPage() {
                     </>
                 )}
 
+                {/* Rejection   */}
                 <Dialog open={!!rejectDialogOrder} onClose={() => setRejectDialogOrder(null)} fullWidth maxWidth="sm">
                     <DialogTitle>Reject order</DialogTitle>
                     <DialogContent>
@@ -180,6 +171,7 @@ export default function OrdersPage() {
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setRejectDialogOrder(null)}>Cancel</Button>
+                        {/* Disable submit until a reason is typed */}
                         <Button
                             variant="contained"
                             color="error"
@@ -195,155 +187,3 @@ export default function OrdersPage() {
     );
 }
 
-function useOrderCountdown(createdAt: string): string {
-    const WINDOW_MS = 5 * 60 * 1000;
-    const [remaining, setRemaining] = useState(() => {
-        const elapsed = Date.now() - new Date(createdAt).getTime();
-        return Math.max(0, WINDOW_MS - elapsed);
-    });
-
-    useEffect(() => {
-        if (remaining <= 0) return;
-        const id = setInterval(() => {
-            const elapsed = Date.now() - new Date(createdAt).getTime();
-            setRemaining(Math.max(0, WINDOW_MS - elapsed));
-        }, 1000);
-        return () => clearInterval(id);
-    }, [createdAt, remaining]);
-
-    if (remaining <= 0) return "Auto-declining...";
-    const secs = Math.ceil(remaining / 1000);
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m}:${s.toString().padStart(2, "0")} left`;
-}
-
-function statusColor(status: string): "warning" | "success" | "error" | "info" | "default" {
-    if (status === "PENDING_DECISION") return "warning";
-    if (status === "ACCEPTED") return "success";
-    if (status === "REJECTED") return "error";
-    if (status === "READY_FOR_PICKUP") return "info";
-    if (status === "PICKED_UP") return "info";
-    if (status === "DELIVERED") return "success";
-    return "default";
-}
-
-function OrderCard({
-    order,
-    onAccept,
-    onReject,
-    onMarkReady,
-    onMarkPickedUp,
-    onMarkDelivered,
-}: {
-    order: OrderResponse;
-    onAccept?: (o: OrderResponse) => void;
-    onReject?: (o: OrderResponse) => void;
-    onMarkReady?: (o: OrderResponse) => void;
-    onMarkPickedUp?: (o: OrderResponse) => void;
-    onMarkDelivered?: (o: OrderResponse) => void;
-}) {
-    const isPending  = order.status === "PENDING_DECISION";
-    const isAccepted = order.status === "ACCEPTED";
-    const isReady    = order.status === "READY_FOR_PICKUP";
-    const isPickedUp = order.status === "PICKED_UP";
-    const total = order.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const countdown = useOrderCountdown(order.createdAt);
-
-    return (
-        <Paper variant="outlined" sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={2}>
-                <Box sx={{ flex: 1 }}>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }} flexWrap="wrap">
-                        <Typography variant="subtitle2">{order.customerName}</Typography>
-                        <Chip label={order.status.replace("_", " ")} size="small" color={statusColor(order.status)} />
-                        {isPending && (
-                            <Chip label={countdown} size="small" color="warning" variant="outlined" />
-                        )}
-                    </Stack>
-
-                    <Typography variant="body2" color="text.secondary">
-                        {order.deliveryStreet} {order.deliveryNumber}, {order.deliveryPostalCode} {order.deliveryCity}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {order.contactEmail}
-                    </Typography>
-
-                    <Divider sx={{ my: 1 }} />
-
-                    {order.items.map((item) => (
-                        <Typography key={item.id} variant="body2" sx={{ mb: 0.25 }}>
-                            {item.quantity}× {item.dishName} — €{(item.price * item.quantity).toFixed(2)}
-                        </Typography>
-                    ))}
-                    <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 600 }}>
-                        Total: €{total.toFixed(2)}
-                    </Typography>
-
-                    {order.rejectionReason && (
-                        <Typography variant="body2" color="error" sx={{ mt: 0.5 }}>
-                            Reason: {order.rejectionReason}
-                        </Typography>
-                    )}
-                </Box>
-
-                <Stack spacing={1}>
-                    {isPending && onAccept && onReject && (
-                        <>
-                            <Button
-                                size="small"
-                                variant="contained"
-                                color="success"
-                                startIcon={<CheckIcon />}
-                                onClick={() => onAccept(order)}
-                            >
-                                Accept
-                            </Button>
-                            <Button
-                                size="small"
-                                variant="outlined"
-                                color="error"
-                                startIcon={<CloseIcon />}
-                                onClick={() => onReject(order)}
-                            >
-                                Reject
-                            </Button>
-                        </>
-                    )}
-                    {isAccepted && onMarkReady && (
-                        <Button
-                            size="small"
-                            variant="contained"
-                            startIcon={<DoneAllIcon />}
-                            onClick={() => onMarkReady(order)}
-                        >
-                            Mark ready
-                        </Button>
-                    )}
-                    {isReady && onMarkPickedUp && (
-                        <Button
-                            size="small"
-                            variant="contained"
-                            color="secondary"
-                            startIcon={<DirectionsBikeIcon />}
-                            onClick={() => onMarkPickedUp(order)}
-                        >
-                            Picked up
-                        </Button>
-                    )}
-                    {isPickedUp && onMarkDelivered && (
-                        <Button
-                            size="small"
-                            variant="contained"
-                            color="success"
-                            startIcon={<HomeIcon />}
-                            onClick={() => onMarkDelivered(order)}
-                        >
-                            Delivered
-                        </Button>
-                    )}
-                </Stack>
-            </Stack>
-        </Paper>
-    );
-}

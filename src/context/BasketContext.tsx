@@ -1,5 +1,7 @@
+// Basket state shared across all customer pages
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
+// Represents one line in the basket (one dish + quantity)
 export interface BasketItem {
     dishId: string;
     dishName: string;
@@ -8,25 +10,27 @@ export interface BasketItem {
     pictureUrl?: string;
 }
 
+// The basket can only contain items from a single restaurant at a time
 interface BasketState {
     restaurantId: string | null;
     restaurantName: string;
     items: BasketItem[];
 }
 
+// All basket operations exposed to consuming components
 interface BasketContextType {
     basket: BasketState;
     addToBasket: (restaurantId: string, restaurantName: string, item: Omit<BasketItem, "quantity">) => void;
     removeFromBasket: (dishId: string) => void;
     updateQuantity: (dishId: string, delta: number) => void;
     clearBasket: () => void;
-    totalItems: number;
-    totalPrice: number;
+    totalItems: number;  // sum of all quantities
+    totalPrice: number;  // sum of price × quantity for all items
 }
 
-// Basket persisted to localStorage so items survive a page refresh or tab close.
-const STORAGE_KEY = "kdg_basket";
+const STORAGE_KEY = "kdg_basket"; // localStorage key
 
+// Reads the basket from localStorage on startup; returns an empty basket if nothing is stored
 function loadBasket(): BasketState {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -40,8 +44,9 @@ function loadBasket(): BasketState {
 const BasketContext = createContext<BasketContextType>({} as BasketContextType);
 
 export function BasketProvider({ children }: { children: ReactNode }) {
-    const [basket, setBasket] = useState<BasketState>(loadBasket);
+    const [basket, setBasket] = useState<BasketState>(loadBasket); //  from localStorage
 
+    // Sync basket to localStorage every time it changes
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(basket));
     }, [basket]);
@@ -54,6 +59,7 @@ export function BasketProvider({ children }: { children: ReactNode }) {
             }
             const existing = prev.items.find((i) => i.dishId === item.dishId);
             if (existing) {
+                // Dish already in basket — increment quantity instead of adding a duplicate
                 return {
                     ...prev,
                     items: prev.items.map((i) =>
@@ -68,6 +74,7 @@ export function BasketProvider({ children }: { children: ReactNode }) {
     const removeFromBasket = (dishId: string) => {
         setBasket((prev) => {
             const items = prev.items.filter((i) => i.dishId !== dishId);
+            // Clear restaurantId when the last item is removed
             return { ...prev, items, restaurantId: items.length === 0 ? null : prev.restaurantId };
         });
     };
@@ -76,7 +83,7 @@ export function BasketProvider({ children }: { children: ReactNode }) {
         setBasket((prev) => {
             const items = prev.items
                 .map((i) => (i.dishId === dishId ? { ...i, quantity: i.quantity + delta } : i))
-                .filter((i) => i.quantity > 0);
+                .filter((i) => i.quantity > 0); // removing the last unit deletes the item
             return { ...prev, items, restaurantId: items.length === 0 ? null : prev.restaurantId };
         });
     };
@@ -93,6 +100,7 @@ export function BasketProvider({ children }: { children: ReactNode }) {
     );
 }
 
+//  hook so components dont  need to import BasketContext directly
 export function useBasket() {
     return useContext(BasketContext);
 }

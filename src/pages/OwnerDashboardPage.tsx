@@ -1,55 +1,48 @@
-// Owner dashboard: shows the owner's restaurant status, open/close controls, and navigation to dishes and orders.
+// Owner dashboard
 import { useEffect, useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import SecurityContext from "../auth/SecurityContext";
 import { getMyRestaurant, openRestaurant, closeRestaurant, deleteMyRestaurant } from "../services/restaurantService";
 import {
-    Box,
-    Typography,
-    Button,
-    Container,
-    CircularProgress,
-    Grid,
-    Paper,
-    Chip,
-    Divider,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogContentText,
-    DialogActions,
+    Box, Typography, Button, Container, CircularProgress,
+    Grid, Paper, Chip, Divider,
+    Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
 } from "@mui/material";
-import PageLayout from "../components/PageLayout";
+import { PageLayout } from "../components/common";
 
-export default function OwnerDashboard() {
+export default function OwnerDashboardPage() {
     const { loggedInUser, logout, isAuthenticated } = useContext(SecurityContext);
     const navigate = useNavigate();
-    const queryClient = useQueryClient();
-    const [togglingStatus, setTogglingStatus] = useState(false);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [deleting, setDeleting] = useState(false);
+    const queryClient = useQueryClient(); //  invalidate cached restaurant data
+    const [togglingStatus, setTogglingStatus] = useState(false);   // disables the open/close button while the request
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false); // controls the confirmation dialog visibility
+    const [deleting, setDeleting] = useState(false);               // disables the delete button while the request
 
+    //  the logged-in owner's restauran
     const { data: restaurant, isLoading, isError } = useQuery({
         queryKey: ["myRestaurant"],
         queryFn: getMyRestaurant,
         enabled: isAuthenticated?.() ?? false,
-        retry: false,
+        retry: false, // error  expected when no restaurant exists
     });
 
+    //  the owner has no restaurant yet — redirect to create one
     useEffect(() => {
         if (!isLoading && restaurant === null) navigate("/create-restaurant");
     }, [restaurant, isLoading, navigate]);
 
+    //  log the user out to avoid a stuck state
     useEffect(() => {
         if (isError) { logout(); }
     }, [isError, logout]);
 
+    // Permanently deletes the restaurant and redirects to the create page
     async function handleDelete() {
         setDeleting(true);
         try {
             await deleteMyRestaurant();
-            queryClient.removeQueries({ queryKey: ["myRestaurant"] });
+            queryClient.removeQueries({ queryKey: ["myRestaurant"] }); // clear stale data from cache
             navigate("/create-restaurant");
         } finally {
             setDeleting(false);
@@ -57,18 +50,20 @@ export default function OwnerDashboard() {
         }
     }
 
+    // Toggles the restaurant between open and closed based on current state
     async function handleToggleOpen() {
         if (!restaurant) return;
         setTogglingStatus(true);
         try {
             if (restaurant.isOpen) await closeRestaurant();
             else await openRestaurant();
-            queryClient.invalidateQueries({ queryKey: ["myRestaurant"] });
+            queryClient.invalidateQueries({ queryKey: ["myRestaurant"] }); // refresh the open/closed
         } finally {
             setTogglingStatus(false);
         }
     }
 
+    //   restaurant query is in progress or the result is undefined
     if (isLoading || restaurant === undefined) {
         return (
             <PageLayout>
@@ -82,9 +77,8 @@ export default function OwnerDashboard() {
     return (
         <PageLayout>
             <Container maxWidth="md">
-                <Typography variant="h4" gutterBottom>
-                    Dashboard
-                </Typography>
+                <Typography variant="h4" gutterBottom>Dashboard</Typography>
+                {/* welecome mess */}
                 {loggedInUser && (
                     <Typography color="text.secondary" sx={{ mb: 4 }}>
                         Welcome back, {loggedInUser.name.split(" ")[0]}
@@ -93,11 +87,13 @@ export default function OwnerDashboard() {
 
                 {restaurant && (
                     <>
+                        {/*  summary with open/close   */}
                         <Paper variant="outlined" sx={{ p: 3, mb: 4 }}>
                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 2 }}>
                                 <Box>
                                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
                                         <Typography variant="h6">{restaurant.name}</Typography>
+                                        {/* Green chip = open, red chip = closed */}
                                         <Chip
                                             label={restaurant.isOpen ? "Open" : "Closed"}
                                             color={restaurant.isOpen ? "success" : "error"}
@@ -112,6 +108,7 @@ export default function OwnerDashboard() {
                                     </Typography>
                                 </Box>
                                 <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                                    {/* Button label  */}
                                     <Button
                                         variant={restaurant.isOpen ? "outlined" : "contained"}
                                         color={restaurant.isOpen ? "error" : "success"}
@@ -120,6 +117,7 @@ export default function OwnerDashboard() {
                                     >
                                         {restaurant.isOpen ? "Close restaurant" : "Open restaurant"}
                                     </Button>
+                                    {/* Delete   */}
                                     <Button
                                         variant="outlined"
                                         color="error"
@@ -131,6 +129,7 @@ export default function OwnerDashboard() {
                             </Box>
                         </Paper>
 
+                        {/* Confirmation  */}
                         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
                             <DialogTitle>Delete restaurant?</DialogTitle>
                             <DialogContent>
@@ -150,6 +149,7 @@ export default function OwnerDashboard() {
 
                         <Divider sx={{ mb: 4 }} />
 
+                        {/* Navigation cards   */}
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 12, sm: 4 }}>
                                 <Paper variant="outlined" sx={{ p: 3 }}>

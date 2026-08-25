@@ -1,5 +1,6 @@
+// Shows how a restaurant's price category has evolved over time
 import { useQuery } from "@tanstack/react-query";
-import { getPriceRangeHistory, type PriceRangePoint } from "../services/restaurantService";
+import { getPriceRangeHistory, type PriceRangePoint } from "../../services/restaurantService";
 import { Box, CircularProgress, Typography, Alert } from "@mui/material";
 import {
     LineChart,
@@ -11,7 +12,7 @@ import {
     ResponsiveContainer,
 } from "recharts";
 
-// Maps enum strings to integers plot them on a numeric Y-axis with custom tick labels.
+//  strings to integers so they can be in lables
 const PRICE_RANGE_ORDER = ["CHEAP", "REGULAR", "EXPENSIVE", "PREMIUM"];
 const PRICE_RANGE_LABELS: Record<string, string> = {
     CHEAP: "€",
@@ -20,14 +21,17 @@ const PRICE_RANGE_LABELS: Record<string, string> = {
     PREMIUM: "€€€€",
 };
 
+// Converts a price range string to a 1-4 integer for the chart Y-axis
 function toNumeric(priceRange: string): number {
     return PRICE_RANGE_ORDER.indexOf(priceRange) + 1;
 }
 
+// Converts the numeric Y value back to the € symbol for axis labels
 function formatYAxis(value: number): string {
     return PRICE_RANGE_LABELS[PRICE_RANGE_ORDER[value - 1]] ?? "";
 }
 
+//shown on hover — displays the month, category symbol, and average price
 function CustomTooltip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null;
     const item: PriceRangePoint = payload[0].payload;
@@ -64,6 +68,7 @@ export default function PriceRangeHistoryChart({ restaurantId }: Props) {
         );
     }
 
+    // Add the numeric Y value alongside the original data for the chart
     const chartData = data.map((p) => ({ ...p, numericRange: toNumeric(p.priceRange) }));
 
     return (
@@ -82,10 +87,10 @@ export default function PriceRangeHistoryChart({ restaurantId }: Props) {
                         tick={{ fontSize: 11, fill: "#6b6560" }}
                         axisLine={{ stroke: "#d0ccc5" }}
                         tickLine={{ stroke: "#d0ccc5" }}
-                        interval="preserveStartEnd"
+                        interval="preserveStartEnd" // avoids overlapping date labels
                     />
                     <YAxis
-                        domain={[1, 4]}
+                        domain={[1, 4]}   // fixed range: 1=€ to 4=€€€€
                         ticks={[1, 2, 3, 4]}
                         tickFormatter={formatYAxis}
                         tick={{ fontSize: 13, fill: "#6b6560" }}
@@ -95,7 +100,7 @@ export default function PriceRangeHistoryChart({ restaurantId }: Props) {
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Line
-                        type="stepAfter"
+                        type="stepAfter"   // step line matches how price ranges change
                         dataKey="numericRange"
                         stroke="#1565c0"
                         strokeWidth={2.5}

@@ -1,20 +1,10 @@
-// Form for registering a new restaurant; owners can only have one restaurant, enforced by the backend.
-import { useForm, Controller } from "react-hook-form";
+// Create restaurant page: shown after first login when an owner has no restaurant yet.
+// Editing restaurant details later is out of scope — this form is a one-time setup.
+import { useForm, Controller } from "react-hook-form"; //  for form state and validation
 import {
-    TextField,
-    Button,
-    Box,
-    IconButton,
-    Typography,
-    MenuItem,
-    Paper,
-    Container,
-    Grid,
-    Divider,
-    CircularProgress,
-    Checkbox,
-    FormControlLabel,
-    Stack,
+    TextField, Button, Box, IconButton, Typography, MenuItem,
+    Paper, Container, Grid, Divider, CircularProgress,
+    Checkbox, FormControlLabel, Stack,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -22,7 +12,8 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { createRestaurant, getMyRestaurant } from "../services/restaurantService";
-import PageLayout from "../components/PageLayout";
+import { PageLayout } from "../components/common";
+
 
 type CreateRestaurantForm = {
     name: string;
@@ -34,20 +25,24 @@ type CreateRestaurantForm = {
     contactEmail: string;
     defaultPreparationTime: number;
     typeOfCuisine: string;
-    openingHours: string;
+    openingHours: string; // the weekly schedule builder
 };
 
+//   cuisine options shown in the dropdown
 const CUISINE_OPTIONS = ["Belgian", "French", "Italian", "Japanese", "Mexican", "Indian", "Greek", "American", "Thai", "Other"];
 
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]; // displayed in order Mon–Sun
 
+// P  schedule entry: whether the restaurant is open and the from/to times
 type DaySchedule = { open: boolean; from: string; to: string };
 type WeeklySchedule = Record<string, DaySchedule>;
 
+// Default schedule
 const DEFAULT_SCHEDULE: WeeklySchedule = Object.fromEntries(
     DAYS.map((d) => [d, { open: d !== "Sun", from: "09:00", to: "22:00" }])
 );
 
+// Converts the visual schedule object into a single string sent to the backend
 function serializeSchedule(schedule: WeeklySchedule): string {
     return DAYS.map((d) =>
         schedule[d].open ? `${d} ${schedule[d].from}–${schedule[d].to}` : `${d} closed`
@@ -58,19 +53,20 @@ export default function CreateRestaurantPage() {
     const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE);
-    const [pictureUrls, setPictureUrls] = useState<string[]>([""]);
-    const pictureUrlsRef = useRef(pictureUrls);
+    const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE); // visual schedule state
+    const [pictureUrls, setPictureUrls] = useState<string[]>([""]); // start with one empty URL field
+    const pictureUrlsRef = useRef(pictureUrls); //   reads the latest value without stale closure
 
+    // Check whether this owner already has a restaurant
     const { data: existingRestaurant, isLoading: checkingRestaurant } = useQuery({
         queryKey: ["myRestaurant"],
         queryFn: getMyRestaurant,
-        retry: false,
+        retry: false, //   expected when no restaurant exists
     });
 
     useEffect(() => {
         if (!checkingRestaurant && existingRestaurant) {
-            navigate("/owner");
+            navigate("/owner"); // owner already set up
         }
     }, [existingRestaurant, checkingRestaurant, navigate]);
 
@@ -81,14 +77,15 @@ export default function CreateRestaurantPage() {
             number: "",
             postalCode: "",
             city: "",
-            country: "Belgium",
+            country: "Belgium", // default for the target market
             contactEmail: "",
             defaultPreparationTime: 15,
             typeOfCuisine: "",
-            openingHours: serializeSchedule(DEFAULT_SCHEDULE),
+            openingHours: serializeSchedule(DEFAULT_SCHEDULE), //   default schedule
         },
     });
 
+    // Updates one day in the schedule and syncs
     const updateDay = (day: string, patch: Partial<DaySchedule>) => {
         setSchedule((prev) => {
             const updated = { ...prev, [day]: { ...prev[day], ...patch } };
@@ -97,17 +94,19 @@ export default function CreateRestaurantPage() {
         });
     };
 
+    //  create the restaurant and navigate to the dashboard on success
     const onSubmit = async (data: CreateRestaurantForm) => {
         setSubmitting(true);
         setError(null);
         try {
             await createRestaurant({
                 ...data,
-                pictureUrls: pictureUrlsRef.current.filter((u) => u.trim() !== ""),
+                pictureUrls: pictureUrlsRef.current.filter((u) => u.trim() !== ""), // exclude empty URL fields
             });
             navigate("/owner");
         } catch (err: any) {
             if (err.response?.status === 409) {
+                // 409 Conflict means the backend already has a restaurant for this owner
                 setError("You already have a restaurant. Each owner can manage exactly one restaurant.");
             } else {
                 setError("Could not create restaurant. Please check your connection and try again.");
@@ -117,6 +116,7 @@ export default function CreateRestaurantPage() {
         }
     };
 
+    //  checking for an existing restaurant
     if (checkingRestaurant) {
         return (
             <PageLayout>
@@ -140,7 +140,7 @@ export default function CreateRestaurantPage() {
                 <Paper elevation={0} sx={{ p: { xs: 3, sm: 4 }, border: "1.5px solid", borderColor: "divider" }}>
                     <form onSubmit={handleSubmit(onSubmit)}>
 
-                        {/* Basic info */}
+                        {/*  Basic info section  */}
                         <Typography variant="subtitle1" sx={{ mb: 2 }}>Basic info</Typography>
                         <Controller name="name" control={control} rules={{ required: true }}
                             render={({ field, fieldState }) => (
@@ -173,6 +173,8 @@ export default function CreateRestaurantPage() {
                                 <TextField {...field} label="Contact email" type="email" fullWidth required margin="normal" />
                             )}
                         />
+
+                        {/*  Picture URL inputs   */}
                         <Box sx={{ mt: 1 }}>
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                 Picture URL(s)
@@ -192,6 +194,7 @@ export default function CreateRestaurantPage() {
                                             fullWidth
                                             placeholder="https://..."
                                         />
+                                        {/* Only show delete button when there is more than one URL field */}
                                         {pictureUrls.length > 1 && (
                                             <IconButton
                                                 size="small"
@@ -206,6 +209,7 @@ export default function CreateRestaurantPage() {
                                         )}
                                     </Stack>
                                 ))}
+                                {/* Add another URL field */}
                                 <Button
                                     size="small"
                                     startIcon={<AddIcon />}
@@ -232,6 +236,7 @@ export default function CreateRestaurantPage() {
                             <Stack spacing={1.5}>
                                 {DAYS.map((day) => (
                                     <Stack key={day} direction="row" alignItems="center" spacing={2}>
+                                        {/* Checkbox toggles the day open/closed */}
                                         <FormControlLabel
                                             sx={{ minWidth: 72, m: 0 }}
                                             control={
@@ -243,6 +248,7 @@ export default function CreateRestaurantPage() {
                                             }
                                             label={<Typography variant="body2" sx={{ fontWeight: 500 }}>{day}</Typography>}
                                         />
+                                        {/* Show time pickers only for open days */}
                                         {schedule[day].open ? (
                                             <>
                                                 <TextField
@@ -250,7 +256,7 @@ export default function CreateRestaurantPage() {
                                                     size="small"
                                                     value={schedule[day].from}
                                                     onChange={(e) => updateDay(day, { from: e.target.value })}
-                                                    inputProps={{ step: 300 }}
+                                                    inputProps={{ step: 300 }} // 5-minute
                                                     sx={{ width: 130 }}
                                                 />
                                                 <Typography variant="body2" color="text.secondary">to</Typography>
@@ -270,12 +276,12 @@ export default function CreateRestaurantPage() {
                                 ))}
                             </Stack>
                         </Paper>
-                        {/* Hidden field keeps the serialized value in the form */}
+                        {/*   keeps t openingHours value   */}
                         <Controller name="openingHours" control={control} render={() => <></>} />
 
                         <Divider sx={{ my: 3 }} />
 
-                        {/* Address */}
+                        {/*  Address section   */}
                         <Typography variant="subtitle1" sx={{ mb: 2 }}>Address</Typography>
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 9 }}>
@@ -315,6 +321,7 @@ export default function CreateRestaurantPage() {
                             </Grid>
                         </Grid>
 
+                        {/* error message shown below the form */}
                         {error && (
                             <Typography color="error" variant="body2" sx={{ mt: 2 }}>{error}</Typography>
                         )}

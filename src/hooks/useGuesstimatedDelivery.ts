@@ -1,31 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { getRestaurantBusyness } from "../services/orderService";
 import type { RestaurantResponse } from "../services/restaurantService";
+import { haversineKm } from "../utils/haversine";
 
 interface GeoPosition {
     latitude: number;
     longitude: number;
-}
-
-
-/**
- * Calculates the great-circle distance between two points on the Earth's surface
- * using the Haversine formula.
- *
- * @param {number} lat1 - Latitude of the first point in decimal degrees.
- * @param {number} lon1 - Longitude of the first point in decimal degrees.
- * @param {number} lat2 - Latitude of the second point in decimal degrees.
- * @param {number} lon2 - Longitude of the second point in decimal degrees.
- * @returns {number} - The distance between the two points in kilometers.
- */
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 async function geocodeAddress(address: string): Promise<GeoPosition | null> {
@@ -42,7 +22,7 @@ async function geocodeAddress(address: string): Promise<GeoPosition | null> {
     }
 }
 
-// Estimates delivery time using haversine distance, 30 km/h travel speed, prep time, and a busyness multiplier.
+// Estimates delivery time using haversine distance, 30 km/h travel speed, prep time
 export function useGuesstimatedDelivery(restaurant: RestaurantResponse | undefined, customerPos: GeoPosition | null) {
     const restaurantAddress = restaurant
         ? `${restaurant.street} ${restaurant.number}, ${restaurant.postalCode} ${restaurant.city}, ${restaurant.country}`
@@ -55,7 +35,7 @@ export function useGuesstimatedDelivery(restaurant: RestaurantResponse | undefin
         queryKey: ["geocode", restaurantAddress],
         queryFn: () => geocodeAddress(restaurantAddress),
         enabled: !!restaurant && !!customerPos && !hasStoredCoords,
-        staleTime: 60 * 60 * 1000, // addresses don't change often; avoid hammering Nominatim
+        staleTime: 60 * 60 * 1000, // addresses don't change often
     });
 
     const restaurantCoords = hasStoredCoords && restaurant
@@ -83,7 +63,7 @@ export function useGuesstimatedDelivery(restaurant: RestaurantResponse | undefin
             restaurantCoords.latitude,
             restaurantCoords.longitude
         );
-        deliveryMinutes = Math.ceil((distKm / 30) * 60); // 30 km/h — on flat courier speed
+        deliveryMinutes = Math.ceil((distKm / 30) * 60); // 30 km/h
     }
 
     const totalMinutes = deliveryMinutes !== null

@@ -1,5 +1,6 @@
-//  Keycloak instance; configuration comes from
+// keycloak ; cfg in env file
 import Keycloak from "keycloak-js";
+
 
 const keycloak = new Keycloak({
     url: import.meta.env.VITE_KC_URL,

@@ -1,12 +1,13 @@
+
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useNavigate } from "react-router-dom";
 import { Button, Chip, Stack, Typography } from "@mui/material";
-import type { RestaurantResponse } from "../services/restaurantService";
+import type { RestaurantResponse } from "../../services/restaurantService";
 
-
-// Leaflet marker icon fix
+// Leaflet's default marker icon uses a method that Vite's bundler removes at build time.
+// Deleting _getIconUrl and providing explicit URLs restores the marker icons.
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -28,21 +29,23 @@ interface RestaurantMapProps {
 export default function RestaurantMap({ restaurants }: RestaurantMapProps) {
     const navigate = useNavigate();
 
-    // Default center on Belgium; restaurants without geocoded coordinates are silently skipped.
+    // Default center on Belgium
     const center: [number, number] = [50.85045, 4.34878];
 
     return (
         <MapContainer
             center={center}
-            zoom={8}
+            zoom={8} // zoom level 8 shows most of Belgium at once
             style={{ height: "500px", width: "100%", borderRadius: 12 }}
         >
+            {/* OpenStreetMap */}
             <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
             {restaurants.map(({ restaurant, priceRange, estimatedMinutes, distanceKm }) => {
+                // Skip restaurants no  coordinates stored
                 if (restaurant.latitude == null || restaurant.longitude == null) return null;
                 const coords: [number, number] = [restaurant.latitude, restaurant.longitude];
 

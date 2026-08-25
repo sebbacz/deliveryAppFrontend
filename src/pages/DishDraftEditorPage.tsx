@@ -1,27 +1,20 @@
-// Edit mode  from pendingDraft so the owner edits the uncommitted version, not the live one visible to customers.
+// Dish draft editor
+
 import { Controller, useForm } from "react-hook-form";
 import {
-    Box,
-    Button,
-    Chip,
-    Container,
-    MenuItem,
-    Paper,
-    Stack,
-    TextField,
-    Typography,
-    CircularProgress,
-    Grid,
-    Divider,
+    Box, Button, Chip, Container, MenuItem, Paper, Stack,
+    TextField, Typography, CircularProgress, Grid, Divider,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { createDishDraft, updateDishDraft, getOwnerDishes } from "../services/dishService";
 import { upsertDish } from "../services/dishStore";
-import PageLayout from "../components/PageLayout";
+import { PageLayout } from "../components/common";
 
 const DISH_TYPES = ["STARTER", "MAIN", "DESSERT"] as const;
-const FOOD_TAG_OPTIONS = ["lactose", "gluten", "vegan", "vegetarian", "nuts", "shellfish"];
+const FOOD_TAG_OPTIONS = ["lactose", "gluten", "vegan", "vegetarian", "nuts", "shellfish"]; // predefined
+
 
 type FormData = {
     name: string;
@@ -34,46 +27,54 @@ type FormData = {
 export default function DishDraftEditorPage() {
     const { restaurantId, dishId } = useParams<{ restaurantId: string; dishId?: string }>();
     const navigate = useNavigate();
-    const isEditMode = !!dishId;
+    const isEditMode = !!dishId; // true when a dishId URL param is present
 
     const [foodTags, setFoodTags] = useState<string[]>([]);
-    const [tagInput, setTagInput] = useState("");
+    const [tagInput, setTagInput] = useState("");            // custom tag text field value
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(isEditMode);
 
     const { control, handleSubmit, reset } = useForm<FormData>({
         defaultValues: { name: "", type: "MAIN", description: "", price: 0, pictureUrl: "" },
     });
 
+    // Fetch owner dishes only in edit mode
+    const { data: ownerDishes, isLoading } = useQuery({
+        queryKey: ["ownerDishes", restaurantId],
+        queryFn: () => getOwnerDishes(restaurantId!),
+        enabled: isEditMode && !!restaurantId,
+    });
+
+    // Sync the fetched dish data
     useEffect(() => {
-        if (!isEditMode || !restaurantId || !dishId) return;
+        if (!ownerDishes || !dishId) return;
+        const dish = ownerDishes.find((d) => d.id === dishId);
+        if (!dish) return;
+        // Prefer pendingDraft
+        const draft = dish.pendingDraft ?? dish;
+        reset({
+            name: draft.name,
+            type: draft.type,
+            description: draft.description,
+            price: draft.price,
+            pictureUrl: draft.pictureUrl,
+        });
+        setFoodTags(draft.foodTags ?? []);
+    }, [ownerDishes, dishId, reset]);
 
-        getOwnerDishes(restaurantId).then((dishes) => {
-            const dish = dishes.find((d) => d.id === dishId);
-            if (!dish) return;
-            const draft = dish.pendingDraft ?? dish;
-            reset({
-                name: draft.name,
-                type: draft.type,
-                description: draft.description,
-                price: draft.price,
-                pictureUrl: draft.pictureUrl,
-            });
-            setFoodTags(draft.foodTags ?? []);
-        }).finally(() => setLoading(false));
-    }, [isEditMode, restaurantId, dishId, reset]);
-
+    // Adds or removes a predefined food tag
     function toggleTag(tag: string) {
         setFoodTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
     }
 
+    // Adds a custom tag typed by the owner; trims and lowercases for consistency
     function addCustomTag() {
         const trimmed = tagInput.trim().toLowerCase();
         if (trimmed && !foodTags.includes(trimmed)) setFoodTags((prev) => [...prev, trimmed]);
-        setTagInput("");
+        setTagInput(""); // clear the input after adding
     }
 
+    // Submit: create a new draft or update an existing one depending on edit mode
     const onSubmit = async (data: FormData) => {
         if (!restaurantId) return;
         setSubmitting(true);
@@ -85,16 +86,16 @@ export default function DishDraftEditorPage() {
                 type: data.type,
                 foodTags,
                 description: data.description,
-                price: Number(data.price),
+                price: Number(data.price), //   gives strings from number inputs
                 pictureUrl: data.pictureUrl,
             };
 
             const result = isEditMode && dishId
-                ? await updateDishDraft(dishId, payload)
-                : await createDishDraft(payload);
+                ? await updateDishDraft(dishId, payload)  // update existing draft
+                : await createDishDraft(payload);         // create new draft
 
-            upsertDish(restaurantId, result);
-            navigate(`/restaurant/${restaurantId}/dishes`);
+            upsertDish(restaurantId, result); // update the local localStorage cache to avoid a stale read
+            navigate(`/restaurant/${restaurantId}/dishes`); // return to the dish list
         } catch {
             setError("Failed to save dish draft. Please try again.");
         } finally {
@@ -102,7 +103,8 @@ export default function DishDraftEditorPage() {
         }
     };
 
-    if (loading) {
+    // Show a loading  while the existing dish data
+    if (isEditMode && isLoading) {
         return (
             <PageLayout>
                 <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
@@ -115,6 +117,7 @@ export default function DishDraftEditorPage() {
     return (
         <PageLayout>
             <Container maxWidth="sm">
+                {/*  and subtitle change based on create vs edit mode */}
                 <Box sx={{ mb: 4 }}>
                     <Button variant="text" onClick={() => navigate(`/restaurant/${restaurantId}/dishes`)} sx={{ mb: 1, pl: 0 }}>
                         ← Back to dishes
@@ -131,6 +134,7 @@ export default function DishDraftEditorPage() {
                     <form onSubmit={handleSubmit(onSubmit)}>
                         <Typography variant="subtitle1" sx={{ mb: 1 }}>Dish details</Typography>
 
+                        {/* Dish name  */}
                         <Controller name="name" control={control} rules={{ required: true }}
                             render={({ field, fieldState }) => (
                                 <TextField {...field} label="Dish name" fullWidth required margin="normal"
@@ -140,12 +144,13 @@ export default function DishDraftEditorPage() {
 
                         <Grid container spacing={2} sx={{ mt: 0 }}>
                             <Grid size={{ xs: 12, sm: 6 }}>
+                                {/*  STARTER, MAIN, or DESSERT */}
                                 <Controller name="type" control={control} rules={{ required: true }}
                                     render={({ field }) => (
                                         <TextField {...field} select label="Type" fullWidth required margin="normal">
                                             {DISH_TYPES.map((t) => (
                                                 <MenuItem key={t} value={t}>
-                                                    {t.charAt(0) + t.slice(1).toLowerCase()}
+                                                    {t.charAt(0) + t.slice(1).toLowerCase()} {/* e.g. "Starter" */}
                                                 </MenuItem>
                                             ))}
                                         </TextField>
@@ -153,6 +158,7 @@ export default function DishDraftEditorPage() {
                                 />
                             </Grid>
                             <Grid size={{ xs: 12, sm: 6 }}>
+                                {/* Price — must be ≥ 0, step 0.01 for cents */}
                                 <Controller name="price" control={control} rules={{ required: true, min: 0 }}
                                     render={({ field, fieldState }) => (
                                         <TextField {...field} label="Price (€)" type="number" fullWidth required margin="normal"
@@ -163,12 +169,14 @@ export default function DishDraftEditorPage() {
                             </Grid>
                         </Grid>
 
+                        {/* Description */}
                         <Controller name="description" control={control} rules={{ required: true }}
                             render={({ field }) => (
                                 <TextField {...field} label="Description" fullWidth required margin="normal" multiline rows={3} />
                             )}
                         />
 
+                        {/* Picture URL   */}
                         <Controller name="pictureUrl" control={control}
                             render={({ field }) => (
                                 <TextField {...field} label="Picture URL" fullWidth margin="normal" placeholder="https://..." />
@@ -177,7 +185,10 @@ export default function DishDraftEditorPage() {
 
                         <Divider sx={{ my: 3 }} />
 
+                        {/* Food tags section */}
                         <Typography variant="subtitle1" sx={{ mb: 1.5 }}>Food tags</Typography>
+
+                        {/* Predefined tags  */}
                         <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
                             {FOOD_TAG_OPTIONS.map((tag) => (
                                 <Chip
@@ -185,13 +196,14 @@ export default function DishDraftEditorPage() {
                                     label={tag}
                                     size="small"
                                     onClick={() => toggleTag(tag)}
-                                    color={foodTags.includes(tag) ? "primary" : "default"}
+                                    color={foodTags.includes(tag) ? "primary" : "default"} // filled = selected
                                     variant={foodTags.includes(tag) ? "filled" : "outlined"}
                                     sx={{ mb: 1, cursor: "pointer" }}
                                 />
                             ))}
                         </Stack>
 
+                        {/* Custom tag input   */}
                         <Stack direction="row" spacing={1}>
                             <TextField
                                 size="small"
@@ -204,6 +216,7 @@ export default function DishDraftEditorPage() {
                             <Button variant="outlined" onClick={addCustomTag}>Add</Button>
                         </Stack>
 
+                        {/* Display custom   */}
                         {foodTags.filter((t) => !FOOD_TAG_OPTIONS.includes(t)).length > 0 && (
                             <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1.5 }}>
                                 {foodTags.filter((t) => !FOOD_TAG_OPTIONS.includes(t)).map((tag) => (
@@ -212,10 +225,12 @@ export default function DishDraftEditorPage() {
                             </Stack>
                         )}
 
+                        {/* Backend error message */}
                         {error && (
                             <Typography color="error" variant="body2" sx={{ mt: 2 }}>{error}</Typography>
                         )}
 
+                        {/* Submit and cancel buttons */}
                         <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
                             <Button type="submit" variant="contained" size="large" fullWidth disabled={submitting}>
                                 {submitting ? <CircularProgress size={22} color="inherit" /> : isEditMode ? "Save changes" : "Save draft"}

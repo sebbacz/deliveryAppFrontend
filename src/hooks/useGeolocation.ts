@@ -1,4 +1,4 @@
-//  browser's GPS position on demand rather, to avoid the permissionprompt on page load.
+// Custom hook that requests the browser's GPS position
 import { useState } from "react";
 
 interface GeoPosition {
@@ -11,6 +11,7 @@ export function useGeolocation() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
+    // Called when the user explicitly clicks
     const requestLocation = () => {
         if (!navigator.geolocation) {
             setError("Geolocation not supported");
@@ -23,7 +24,7 @@ export function useGeolocation() {
                 setLoading(false);
             },
             (err) => {
-                setError(err.message);
+                setError(err.message); //when user denied location
                 setLoading(false);
             }
         );

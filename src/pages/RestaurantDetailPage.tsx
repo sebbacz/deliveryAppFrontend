@@ -1,4 +1,5 @@
-// Public restaurant detail page: shows menu, adds items to basket, and guards against mixing restaurants.
+// Public restaurant detail page
+// Dishes can be filtered by type (starter/main/dessert) and food tags, and sorted by price.
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -23,39 +24,42 @@ import {
     Stack,
     ToggleButton,
     ToggleButtonGroup,
-    Tooltip,
     Typography,
 } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
-import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { getRestaurantById } from "../services/restaurantService";
 import { getPublishedDishes, type DishResponse } from "../services/dishService";
-import PriceRangeHistoryChart from "../components/PriceRangeHistoryChart";
 import { useBasket } from "../context/BasketContext";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { useGuesstimatedDelivery } from "../hooks/useGuesstimatedDelivery";
-import PageLayout from "../components/PageLayout";
+import { PageLayout } from "../components/common";
+import { PriceRangeHistoryChart } from "../components/charts";
+import { DishCard } from "../components/dish";
 
-type DishTypeFilter = "ALL" | "STARTER" | "MAIN" | "DESSERT";
+type DishTypeFilter = "ALL" | "STARTER" | "MAIN" | "DESSERT"; // maps to the backend dish type enum
 type SortOption = "none" | "price_asc" | "price_desc";
 
 export default function RestaurantDetailPage() {
     const { restaurantId } = useParams<{ restaurantId: string }>();
     const navigate = useNavigate();
 
+    // Filter and sort state — all local, no server round-trip needed
     const [typeFilter, setTypeFilter] = useState<DishTypeFilter>("ALL");
-    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [selectedTags, setSelectedTags] = useState<string[]>([]); //  dish must have ALL selected tags
     const [sortOption, setSortOption] = useState<SortOption>("none");
+
+    //   customer tries to add a dish from a different restaurant than what's in the basket
     const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; pendingDish: DishResponse | null }>({
         open: false,
         pendingDish: null,
     });
 
     const { basket, addToBasket } = useBasket();
-    const { position, loading: geoLoading, requestLocation } = useGeolocation();
+    const { position, loading: geoLoading, requestLocation } = useGeolocation(); // on-demand GPS
 
+    // Fetch restaurant details  every 30 s to catch open/closed status changes
     const { data: restaurant, isLoading: restaurantLoading } = useQuery({
         queryKey: ["restaurant", restaurantId],
         queryFn: () => getRestaurantById(restaurantId!),
@@ -63,6 +67,7 @@ export default function RestaurantDetailPage() {
         refetchInterval: 30_000,
     });
 
+    // Fetch published (live) dishes —
     const { data: dishes = [], isLoading: dishesLoading } = useQuery({
         queryKey: ["publicDishes", restaurantId],
         queryFn: () => getPublishedDishes(restaurantId!),
@@ -70,22 +75,28 @@ export default function RestaurantDetailPage() {
         refetchInterval: 30_000,
     });
 
+    // Guesstimated delivery time
     const delivery = useGuesstimatedDelivery(restaurant, position);
 
+    // Collect all unique food tags from the loaded dishes to populate the tag filter row
     const allTags = [...new Set(dishes.flatMap((d) => d.foodTags ?? []))].sort();
 
+    // Apply type filter first,
     let filteredDishes = dishes.filter((d) => {
         const matchesType = typeFilter === "ALL" || d.type === typeFilter;
         const matchesTags = selectedTags.length === 0 || selectedTags.every((tag) => d.foodTags?.includes(tag));
         return matchesType && matchesTags;
     });
 
+    // Apply price sort after filtering;
     if (sortOption === "price_asc") filteredDishes = [...filteredDishes].sort((a, b) => a.price - b.price);
     else if (sortOption === "price_desc") filteredDishes = [...filteredDishes].sort((a, b) => b.price - a.price);
 
+    // Called when the customer clicks
     const handleAddToBasket = (dish: DishResponse) => {
-        if (!dish.inStock || !restaurant?.isOpen) return;
+        if (!dish.inStock || !restaurant?.isOpen) return; // guard: button should be disabled, but double-check
         if (basket.restaurantId && basket.restaurantId !== restaurantId) {
+            // Basket has items from a different restaurant — ask before clearing
             setConfirmDialog({ open: true, pendingDish: dish });
             return;
         }
@@ -97,6 +108,7 @@ export default function RestaurantDetailPage() {
         });
     };
 
+    // Called when the customer confirms they want to replace the current basket
     const confirmAddToBasket = () => {
         const dish = confirmDialog.pendingDish!;
         addToBasket(restaurantId!, restaurant?.name ?? "", {
@@ -108,6 +120,7 @@ export default function RestaurantDetailPage() {
         setConfirmDialog({ open: false, pendingDish: null });
     };
 
+    // Full-screen   while the restaurant data is loading
     if (restaurantLoading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
@@ -116,6 +129,7 @@ export default function RestaurantDetailPage() {
         );
     }
 
+    // Not found state
     if (!restaurant) {
         return (
             <PageLayout>
@@ -130,18 +144,22 @@ export default function RestaurantDetailPage() {
     return (
         <PageLayout>
             <Container maxWidth="lg">
+                {/* Back link to the restaurant listing */}
                 <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/restaurants")} sx={{ mb: 2 }}>
                     All restaurants
                 </Button>
 
+                {/* Restaurant photo gallery   */}
                 {restaurant.pictureUrls?.length > 0 && (
                     <Stack spacing={1} sx={{ mb: 3 }}>
+                        {/* First image   */}
                         <Box
                             component="img"
                             src={restaurant.pictureUrls[0]}
                             alt={restaurant.name}
                             sx={{ width: "100%", maxHeight: 280, objectFit: "cover", borderRadius: 1, display: "block" }}
                         />
+                        {/* Additional images as a horizontally  */}
                         {restaurant.pictureUrls.length > 1 && (
                             <Stack direction="row" spacing={1} sx={{ overflowX: "auto" }}>
                                 {restaurant.pictureUrls.slice(1).map((url, i) => (
@@ -158,9 +176,10 @@ export default function RestaurantDetailPage() {
                     </Stack>
                 )}
 
-                {/* Restaurant info */}
+                {/* Restaurant info + delivery estimate card  */}
                 <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" gap={3} mb={3}>
                     <Box>
+                        {/* Name, open/closed chip, cuisine type */}
                         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                             <Typography variant="h5">{restaurant.name}</Typography>
                             <Chip
@@ -172,6 +191,7 @@ export default function RestaurantDetailPage() {
                                 <Chip label={restaurant.typeOfCuisine} variant="outlined" size="small" />
                             )}
                         </Stack>
+                        {/* Full address + contact email */}
                         <Typography variant="body2" color="text.secondary">
                             {restaurant.street} {restaurant.number}, {restaurant.postalCode} {restaurant.city}, {restaurant.country}
                         </Typography>
@@ -180,22 +200,26 @@ export default function RestaurantDetailPage() {
                         )}
                     </Box>
 
+                    {/* Delivery estimate sidebar card */}
                     <Paper variant="outlined" sx={{ p: 2, minWidth: 200 }}>
                         <Stack spacing={0.5}>
                             <Stack direction="row" alignItems="center" spacing={0.5}>
                                 <AccessTimeIcon fontSize="small" color="action" />
                                 <Typography variant="body2">Prep: {restaurant.defaultPreparationTime} min</Typography>
                             </Stack>
+                            {/* Full estimate shown only when the customer has shared their location */}
                             {delivery?.totalMinutes != null && (
                                 <Typography variant="body2" color="primary">
                                     Est. delivery: ~{delivery.totalMinutes} min
                                 </Typography>
                             )}
+                            {/* Opening hours string from the owner   */}
                             {restaurant.openingHours && (
                                 <Typography variant="body2" color="text.secondary">
                                     Hours: {restaurant.openingHours}
                                 </Typography>
                             )}
+                            {/* On-demand location button — green when active */}
                             <Button
                                 size="small"
                                 startIcon={<LocationOnIcon />}
@@ -214,10 +238,11 @@ export default function RestaurantDetailPage() {
                 {/* Dish filters */}
                 <Stack spacing={2} sx={{ mb: 3 }}>
                     <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} spacing={2} flexWrap="wrap">
+                        {/* Exclusive type filter: ALL / STARTER / MAIN / DESSERT */}
                         <ToggleButtonGroup
                             value={typeFilter}
                             exclusive
-                            onChange={(_, val) => val && setTypeFilter(val)}
+                            onChange={(_, val) => val && setTypeFilter(val)} // val is null on is clicked again
                             size="small"
                         >
                             <ToggleButton value="ALL">All</ToggleButton>
@@ -226,6 +251,7 @@ export default function RestaurantDetailPage() {
                             <ToggleButton value="DESSERT">Desserts</ToggleButton>
                         </ToggleButtonGroup>
 
+                        {/* Price sort dropdown */}
                         <FormControl size="small" sx={{ minWidth: 160 }}>
                             <InputLabel>Sort by price</InputLabel>
                             <Select value={sortOption} label="Sort by price" onChange={(e) => setSortOption(e.target.value as SortOption)}>
@@ -236,6 +262,7 @@ export default function RestaurantDetailPage() {
                         </FormControl>
                     </Stack>
 
+                    {/* Food tag multi-select chips — only shown when there are tags to filter on */}
                     {allTags.length > 0 && (
                         <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
                             <Typography variant="body2" color="text.secondary">Tags:</Typography>
@@ -244,12 +271,16 @@ export default function RestaurantDetailPage() {
                                     key={tag}
                                     label={tag}
                                     size="small"
-                                    onClick={() => setSelectedTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                                    // Toggle: add tag if not selected, remove it if already selected
+                                    onClick={() => setSelectedTags((prev) =>
+                                        prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                                    )}
                                     color={selectedTags.includes(tag) ? "primary" : "default"}
                                     variant={selectedTags.includes(tag) ? "filled" : "outlined"}
                                     clickable
                                 />
                             ))}
+                            {/* Clear all selected tags at once */}
                             {selectedTags.length > 0 && (
                                 <Button size="small" onClick={() => setSelectedTags([])}>Clear</Button>
                             )}
@@ -257,21 +288,25 @@ export default function RestaurantDetailPage() {
                     )}
                 </Stack>
 
+                {/* Dish count in heading   */}
                 <Typography variant="h6" sx={{ mb: 2 }}>
                     Menu ({filteredDishes.length} dish{filteredDishes.length !== 1 ? "es" : ""})
                 </Typography>
 
+                {/* Warn when the restaurant is closed   */}
                 {!restaurant.isOpen && (
                     <Alert severity="warning" sx={{ mb: 2 }}>
                         This restaurant is currently closed. Ordering is unavailable.
                     </Alert>
                 )}
 
+                {/*  Dish grid  */}
                 {dishesLoading ? (
                     <Box display="flex" justifyContent="center" py={4}>
                         <CircularProgress />
                     </Box>
                 ) : filteredDishes.length === 0 ? (
+                    // Empty state when filters exclude everything
                     <Paper variant="outlined" sx={{ p: 4, textAlign: "center" }}>
                         <Typography color="text.secondary">No dishes match your filters.</Typography>
                     </Paper>
@@ -289,9 +324,12 @@ export default function RestaurantDetailPage() {
                     </Grid>
                 )}
 
+                {/* Price range evolution chart   */}
                 <Divider sx={{ my: 4 }} />
                 <PriceRangeHistoryChart restaurantId={restaurantId!} />
 
+                {/* Replace-basket confirmation dialog ── */}
+                {/* Shown when the customer tries to add a dish from a different restaurant than what's in the basket */}
                 <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({ open: false, pendingDish: null })} maxWidth="xs" fullWidth>
                     <DialogTitle>Replace basket?</DialogTitle>
                     <DialogContent>
@@ -309,65 +347,3 @@ export default function RestaurantDetailPage() {
     );
 }
 
-function DishCard({ dish, restaurantClosed, onAddToBasket }: {
-    dish: DishResponse;
-    restaurantClosed: boolean;
-    onAddToBasket: () => void;
-}) {
-    const isDisabled = !dish.inStock || restaurantClosed;
-
-    return (
-        <Paper variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", opacity: dish.inStock ? 1 : 0.6 }}>
-            {dish.pictureUrl ? (
-                <Box
-                    component="img"
-                    src={dish.pictureUrl}
-                    alt={dish.name}
-                    sx={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
-                />
-            ) : (
-                <Box sx={{ height: 140, bgcolor: "grey.100", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Typography variant="body2" color="text.disabled">No image</Typography>
-                </Box>
-            )}
-
-            <Box sx={{ p: 2, flexGrow: 1, display: "flex", flexDirection: "column", gap: 1 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                    <Typography variant="subtitle2" sx={{ flexGrow: 1, mr: 1 }}>{dish.name}</Typography>
-                    <Typography variant="subtitle2" color="primary">€{dish.price.toFixed(2)}</Typography>
-                </Stack>
-
-                {!dish.inStock && <Chip label="Out of stock" size="small" color="warning" />}
-
-                {dish.description && (
-                    <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
-                        {dish.description}
-                    </Typography>
-                )}
-
-                {dish.foodTags?.length > 0 && (
-                    <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                        {dish.foodTags.map((tag) => (
-                            <Chip key={tag} label={tag} size="small" variant="outlined" />
-                        ))}
-                    </Stack>
-                )}
-
-                <Tooltip title={restaurantClosed ? "Restaurant is closed" : !dish.inStock ? "Out of stock" : ""}>
-                    <span>
-                        <Button
-                            variant="contained"
-                            size="small"
-                            fullWidth
-                            startIcon={<AddShoppingCartIcon />}
-                            disabled={isDisabled}
-                            onClick={onAddToBasket}
-                        >
-                            Add to basket
-                        </Button>
-                    </span>
-                </Tooltip>
-            </Box>
-        </Paper>
-    );
-}

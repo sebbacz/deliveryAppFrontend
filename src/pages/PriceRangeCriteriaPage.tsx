@@ -1,4 +1,5 @@
-// Allows owners to add new price-range threshold events and view the classification history chart.
+//  page for managing price range criteria (event-sourced thresholds).
+// Each saved entry creates a new criteria event; the most recent one determines the current € / €€ / €€€ / €€€€ classification.
 import { useForm, Controller } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,8 +18,9 @@ import {
     TableBody,
     Divider,
 } from "@mui/material";
-import PageLayout from "../components/PageLayout";
+import { PageLayout } from "../components/common";
 import { getCriteriaEvents, addCriteriaEvent } from "../services/priceRangeService";
+
 
 type CriteriaForm = {
     effectiveAt: string;
@@ -29,28 +31,34 @@ type CriteriaForm = {
 
 export default function PriceRangeCriteriaPage() {
     const queryClient = useQueryClient();
+
+    // Fetch all past criteria events for the history table
     const { data: events, isLoading } = useQuery({
         queryKey: ["criteriaEvents"],
         queryFn: getCriteriaEvents,
     });
 
+    //  a new criteria event and resets the form on success
     const mutation = useMutation({
         mutationFn: addCriteriaEvent,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["criteriaEvents"] });
-            reset();
+            queryClient.invalidateQueries({ queryKey: ["criteriaEvents"] }); // refresh history table
+            reset(); // clear the form so the owner can add another entry easily
         },
     });
 
+    //  sensible defaults: "now" for effective date
     const { control, handleSubmit, reset } = useForm<CriteriaForm>({
         defaultValues: {
-            effectiveAt: new Date().toISOString().slice(0, 16),
+            effectiveAt: new Date().toISOString().slice(0, 16), // "YYYY-MM-DDTHH:MM"
             cheapMax: 10,
             regularMax: 30,
             expensiveMax: 60,
         },
     });
 
+
+    // Append ":00" because datetime-local gives "YYYY-MM-DDTHH:MM" but the backend expects seconds
     const onSubmit = (data: CriteriaForm) => {
         mutation.mutate({
             effectiveAt: data.effectiveAt + ":00",
@@ -63,19 +71,21 @@ export default function PriceRangeCriteriaPage() {
     return (
         <PageLayout>
             <Container maxWidth="md">
+                {/* Page header  */}
                 <Box sx={{ mb: 4 }}>
                     <Typography variant="h5" gutterBottom>Price Range Criteria</Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Adjust the thresholds used to classify restaurants into price ranges (€, €€, €€€, €€€€).
+                        Adjust criteria price ranges (€, €€, €€€, €€€€).
                         Each entry takes effect from the specified date and affects how price range history is displayed.
                     </Typography>
                 </Box>
 
-                {/* Add new criteria form */}
+                {/* Add new criteria form  */}
                 <Paper elevation={0} sx={{ p: 3, mb: 4, border: "1.5px solid", borderColor: "divider" }}>
                     <Typography variant="subtitle1" sx={{ mb: 2 }}>Add new criteria</Typography>
                     <form onSubmit={handleSubmit(onSubmit)}>
                         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            {/* Effective-from datetime  */}
                             <Controller
                                 name="effectiveAt"
                                 control={control}
@@ -88,12 +98,14 @@ export default function PriceRangeCriteriaPage() {
                                         fullWidth
                                         required
                                         error={!!fieldState.error}
-                                        InputLabelProps={{ shrink: true }}
+                                        InputLabelProps={{ shrink: true }} //  prevents label overlap with the date value
                                     />
                                 )}
                             />
 
+                            {/*  fields side by side: cheapMax, regularMax, expensiveMax */}
                             <Box sx={{ display: "flex", gap: 2 }}>
+                                {/* cheapMax: avg price ≤ this → restaurant shows as € */}
                                 <Controller
                                     name="cheapMax"
                                     control={control}
@@ -111,6 +123,7 @@ export default function PriceRangeCriteriaPage() {
                                         />
                                     )}
                                 />
+                                {/*  avg price between cheapMax and this → €€ */}
                                 <Controller
                                     name="regularMax"
                                     control={control}
@@ -128,6 +141,7 @@ export default function PriceRangeCriteriaPage() {
                                         />
                                     )}
                                 />
+                                {/*   avg price between regularMax and this → €€€, above → €€€€ */}
                                 <Controller
                                     name="expensiveMax"
                                     control={control}
@@ -147,6 +161,7 @@ export default function PriceRangeCriteriaPage() {
                                 />
                             </Box>
 
+                            {/* Backend error or success feedback */}
                             {mutation.isError && (
                                 <Alert severity="error">Failed to save criteria. Please try again.</Alert>
                             )}
@@ -154,6 +169,7 @@ export default function PriceRangeCriteriaPage() {
                                 <Alert severity="success">New criteria added successfully.</Alert>
                             )}
 
+                            {/* Submit button   */}
                             <Button
                                 type="submit"
                                 variant="contained"
@@ -168,7 +184,7 @@ export default function PriceRangeCriteriaPage() {
 
                 <Divider sx={{ mb: 4 }} />
 
-                {/* Criteria history table */}
+                {/* Criteria history table  */}
                 <Typography variant="subtitle1" sx={{ mb: 2 }}>Criteria history</Typography>
                 {isLoading ? (
                     <Box display="flex" justifyContent="center" py={4}>
@@ -187,15 +203,16 @@ export default function PriceRangeCriteriaPage() {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
+                                {/*   recent event appears at the top */}
                                 {[...events].reverse().map((e) => (
                                     <TableRow key={e.id}>
                                         <TableCell>
-                                            {new Date(e.effectiveAt).toLocaleString()}
+                                            {new Date(e.effectiveAt).toLocaleString()} {/* format with  */}
                                         </TableCell>
                                         <TableCell align="right">≤ €{e.cheapMax}</TableCell>
                                         <TableCell align="right">≤ €{e.regularMax}</TableCell>
                                         <TableCell align="right">≤ €{e.expensiveMax}</TableCell>
-                                        <TableCell align="right">&gt; €{e.expensiveMax}</TableCell>
+                                        <TableCell align="right">&gt; €{e.expensiveMax}</TableCell> {/* open */}
                                     </TableRow>
                                 ))}
                             </TableBody>

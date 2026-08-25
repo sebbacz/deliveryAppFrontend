@@ -1,29 +1,29 @@
-//  owner/customer role split so users self-select
+// Landing page
 import { useNavigate } from "react-router-dom";
 import { Box, Button, Container, Toolbar, Typography, Stack, Paper } from "@mui/material";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
-import StorefrontIcon from "@mui/icons-material/Storefront";
-import Navbar from "../components/Navbar";
+import StorefrontIcon from "@mui/icons-material/Storefront";         // icon for the owner card
+import { Navbar } from "../components/common";
 
 export default function LandingPage() {
-    const navigate = useNavigate();
+    const navigate = useNavigate(); // used to  change the route on button click
 
     return (
-        <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+        <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}> {/*  warm background */}
             <Navbar />
-            <Toolbar />
+            <Toolbar /> {/* empty spacer so content starts below the fixed AppBar */}
 
-            {/* Hero */}
+            {/* start section */}
             <Box
                 sx={{
-                    bgcolor: "primary.main",
-                    color: "primary.contrastText",
-                    py: { xs: 8, md: 12 },
+                    bgcolor: "primary.main",       // dark green background
+                    color: "primary.contrastText",  // white text for contrast
+                    py: { xs: 8, md: 12 },          // vertical padding on larger screens
                     position: "relative",
-                    overflow: "hidden",
+                    overflow: "hidden",             // decorative rings that extend outside
                 }}
             >
-                {/* Decorative organic rings */}
+                {/* Decorative rings  */}
                 <Box sx={{
                     position: "absolute", top: "-60px", right: "-80px",
                     width: 340, height: 340, borderRadius: "50%",
@@ -40,6 +40,7 @@ export default function LandingPage() {
                     border: "1px solid rgba(253,250,242,0.07)", pointerEvents: "none",
                 }} />
 
+                {/* center text  */}
                 <Container maxWidth="md" sx={{ textAlign: "center", position: "relative" }}>
                     <Typography
                         variant="overline"
@@ -68,9 +69,11 @@ export default function LandingPage() {
                 </Container>
             </Box>
 
-            {/* Role cards */}
+            {/* role lelestion */}
             <Container maxWidth="md" sx={{ py: 7 }}>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={3}> {/* stack verticlaloyt */}
+
+                    {/* Owner card */}
                     <Paper
                         elevation={2}
                         sx={{
@@ -78,6 +81,7 @@ export default function LandingPage() {
                             border: "1px solid", borderColor: "divider",
                         }}
                     >
+                        {/* icon */}
                         <Box
                             sx={{
                                 width: 48, height: 48, borderRadius: "50%",
@@ -93,11 +97,13 @@ export default function LandingPage() {
                         <Typography color="text.secondary" sx={{ mb: 3.5, lineHeight: 1.7 }}>
                             Manage your menu, handle incoming orders, and keep your kitchen running smoothly.
                         </Typography>
+                        {/* Navigates to login   */}
                         <Button variant="contained" onClick={() => navigate("/login")} fullWidth size="large">
                             Continue as Owner
                         </Button>
                     </Paper>
 
+                    {/* Customer */}
                     <Paper
                         elevation={2}
                         sx={{
@@ -120,6 +126,7 @@ export default function LandingPage() {
                         <Typography color="text.secondary" sx={{ mb: 3.5, lineHeight: 1.7 }}>
                             Discover local restaurants, build your basket, and track your order in real time.
                         </Typography>
+                        {/* Customers go straight to the restaurant list — no login required */}
                         <Button variant="outlined" color="secondary" onClick={() => navigate("/restaurants")} fullWidth size="large">
                             Browse Restaurants
                         </Button>

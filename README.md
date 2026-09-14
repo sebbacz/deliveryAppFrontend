@@ -1,25 +1,11 @@
-# Programming 6 — Keep Dishes Going
+# Delivery App
 
-**Sebastian Gondek**
 
 - Documentation: `/documentation`  <-----
 - Wireframes: `/documentation/wireframes` <-------
 
 ---
 
-#  Keep Dishes Going 
-
-## Challenges & Accomplishments
-
-The most challenging part was implementing 
-the **dish draft/pending state machine**.
-A dish can be in one of three states — `DRAFT`, `LIVE`, or `LIVE_WITH_PENDING` — and the UI had to correctly reflect each state with the right action buttons, without ever 
-letting a pending edit break the live menu that customers see.
-
-I'm most proud of the **guesstimated delivery time**: it uses the Haversine formula to calculate the straight-line distance between the user's 
-geolocation and the restaurant, then combines that with the restaurant's preparation time to show a realistic delivery estimate on every card.
-
----
 
 ## ✅ Finished Features
 
@@ -42,8 +28,4 @@ geolocation and the restaurant, then combines that with the restaurant's prepara
 - [x] Opening hours display per restaurant
 
 ---
-
-## ❌ Unfinished / Planned Features
-
-- hope everything is done 
 

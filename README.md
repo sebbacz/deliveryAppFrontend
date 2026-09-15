@@ -1,13 +1,13 @@
 # Delivery App
 
 
-- Documentation: `/documentation`  <-----
-- Wireframes: `/documentation/wireframes` <-------
+- Documentation: `/documentation` 
+- Wireframes: `/documentation/wireframes` 
 
 ---
 
 
-## ✅ Finished Features
+##  Features
 
 - [x] Keycloak authentication (login / logout / role-based access)
 - [x] Restaurant creation and owner dashboard
